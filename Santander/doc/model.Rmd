@@ -1,0 +1,145 @@
+---
+title: "Santander Model"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Santander Model
+
+```{r}
+setwd("~/kaggle/competition-sandtander/")
+library(tidyr)
+library(plyr)
+library(dplyr)
+library(data.table)
+library(ggplot2)
+library(glmnet)
+```
+
+To train our model, the idea is to predict the likelihood that a customer owns a particular product in the next month. So we get a label by self-joining the data connected by consecutive months.
+
+```{r}
+df <- fread("cleaned.csv")
+df <- df %>% 
+  arrange(ncodpers) %>%
+  slice(1:100000) # no need to use all of the data until we want to make an actual submission
+df <- merge(df,df %>%
+              select(ind_aval_fin_ult1:ind_recibo_ult1, month.next.id, ncodpers),by.x=c("ncodpers","month.id"), by.y=c("ncodpers","month.next.id"))
+```
+
+Now the names appended with ".x" are the statuses of the product ownership currently (we will have this information in the testing data), and the ones with ".y" are the future ones. I'll change the names for clarity. 
+
+```{r}
+new.names <- names(df)
+new.names[grepl("ind.*\\.x",new.names)] <- gsub("\\.x","",new.names[grepl("ind.*\\.x",new.names)])
+
+new.names[grepl("ind.*\\.y",new.names)] <- gsub("\\.y","_target",new.names[grepl("ind.*\\.y",new.names)])
+
+names(df) <- new.names
+
+labels <- names(df)[grepl(".*_target",names(df))]
+print(labels)
+
+for (label in labels){
+  base <- gsub("_target","",label)
+  vals <- (rowSums(df[,c(base,label)]))
+  print(table(vals))
+  
+}
+
+char.cols <- names(df)[sapply(df,is.character)]
+df[,char.cols] <- lapply(df[,char.cols], as.factor)
+```
+
+Now that we have a label, the strategy is to loop through each product, build a model, and predict probabilities for the following month. Once we have probabilities for every product, the final recommendation will be the 7 products with the highest probabilities after removing products that are already owned. Abstracting the model building/prediction from the rest of the pipeline is a good idea because it means as long as we wrap whatever models we try in a common interface we don't have to worry about something breaking unexpectedly. For now I'm using the simplest thing possible to get a working version.  
+
+As of now I'll make that interface just take in the training/testing data, names of the feature/label columns, and return a named list of the predictions. The naming part is useful later.
+
+```{r}
+build.predictions <- function(df, features, label, test=df){
+  # df:       training data
+  # features: character vector of column names to use as features
+  # label:    string representing which column to predict
+  # test:     the data to predict on
+  
+  # This function can be a major source of our tuning. As long as whatever models we build produce output in the same format as this then the rest of the code won't need to be changed much
+  model      <- glm(as.formula(paste(label,paste(features,collapse=" + "),sep=" ~ ")),data=df)
+  predictions <- predict(model,test)
+  print(sprintf("Accuracy for label %s = %f",label,mean(round(predictions)==df[[label]])))
+  predictions <- list(predictions)
+  names(predictions) <- paste(gsub("_target","",label),"_pred",sep="")
+  return(predictions)
+}
+```
+
+Loop through the products and make the predictions.
+*TO DO: This part should be using the test data, which should be cleaned similarly to how the training data was, and the current product ownership for the testing data needs to be extracted from the final month of the training data. For now I'll just work with the training data as a placeholder*
+
+```{r}
+# remove some unhelpful columns
+df <- df %>% 
+  select(-fecha_alta,-fecha_dato,-total.services,-month.next.id)
+
+# cycle through each label and 
+predictions <- list()
+for (label in labels){
+  predictions <- c(predictions,build.predictions(df,names(df)[2:46],label) )
+}
+predictions <- as.data.table(predictions)
+df          <- as.data.table(cbind(df,predictions))
+```
+
+My plan for extracting the highest probability products is to melt the data frame into a big list of people, whether or not they currently own a product, and the likelihood that they will own that product the next month. You can then filter out all of the products they currently own (because they can't add them and dropping products has nothing to do with the competition). Then it's just grouping/aggregating to get the final answer. To keep the information about product ownership and predictions for each product in the same place I'll make combined hybrid columns that contain both types of information 
+
+```{r}
+test <- df[,!names(df) %in% labels, with=FALSE]
+test <- test %>%
+  select(-(ind_empleado:segmento),-month)
+products <- gsub("_target","",labels)
+
+make.hybrid <- function(x,df,product){
+    hybrid <- paste(as.character(x),
+                    as.character(df[[paste(product,"_pred",sep="")]]))
+    return(hybrid)
+}
+for (product in products){
+  test[[product]] <- make.hybrid(test[[product]],test,product)
+}
+
+t <- test[,!grepl("_pred",names(test)),with=FALSE]
+```
+
+Now that each column contains all the information we need about one product, we can do the melt. I'm still learning `data.table` and am more familiar with `dplyr`, so I'm kind of swapping back and forth between the two..
+
+```{r}
+test <- as.data.frame(melt(test,
+                           id.vars      = c("ncodpers","month.id"),
+                           measure.vars =  products,
+                           variable.name= "product",
+                           value.name   = "score"))
+test <- test %>%
+  filter(grepl("0\\ ",score)) # only keep products that have potential to be added
+test <- test %>%
+  mutate(score=as.numeric(gsub("0\\ ","",score))) # re-extract the probability
+```
+
+At this point we just need to group by person, order by probability, and paste together a string of the 7 most likely products
+
+```{r}
+paste.strings <- function(products){
+  paste(products,collapse=" ")
+}
+
+results <- test %>%
+  group_by(ncodpers,month.id) %>%
+  arrange(desc(score)) %>%
+  slice(1:7) %>%
+  summarise(added_products=paste.strings(product)) %>%
+  select(ncodpers,added_products)
+
+write.csv(results,"recommendations.csv")
+```
+
