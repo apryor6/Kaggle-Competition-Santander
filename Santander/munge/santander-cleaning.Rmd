@@ -41,7 +41,13 @@ setwd("~/kaggle/competition-sandtander/")
 set.seed(1)
 # df <- fread("df_small.csv")
 # limit.rows <- 1000000
-df <- fread("train_ver2.csv",nrows=-1)
+df   <- as.data.frame(fread("train_ver2.csv",nrows=-1))
+features <- grepl("ind_+.*ult.*",names(df))
+test <- as.data.frame(fread("test_ver2.csv"))
+test <- cbind(test,df[1:nrow(test),features])
+
+
+
 # df <- df %>% arrange(ncodpers) %>% slice(1:limit.rows)
 unique.id <- unique(df$ncodpers)
 # limit.people <- 1e2
@@ -304,7 +310,6 @@ Convert all the features to numeric dummy indicators (you'll see why in a second
 ```{r message=FALSE, warning=FALSE}
 features <- grepl("ind_+.*ult.*",names(df))
 df[,features] <- lapply(df[,features],function(x)as.integer(round(x)))
-df$total.services <- rowSums(df[,features],na.rm=TRUE)
 ```
 
 
@@ -314,11 +319,20 @@ A cool trick to turn dates into unique id numbers is to use `as.numeric(factor(.
 ```{r message=FALSE, warning=FALSE}
 df <- df %>% arrange(fecha_dato)
 df$month.id <- as.numeric(factor((df$fecha_dato)))
-df$month.next.id <- df$month.id + 1
+df$month.previous.id <- df$month.id - 1
 ```
 
 ```{r}
-write.csv(df,"cleaned.csv",row.names=FALSE)
+features <- names(df)[grepl("ind_+.*ult.*",names(df))]
+
+test <- df %>%
+  filter(month.id==max(df$month.id) & ncodpers %in% unique(test$ncodpers)) %>%
+  select(-one_of(features))
+df <- df %>%
+  filter(month.id<max(df$month.id))
+write.csv(df,"cleaned_train.csv",row.names=FALSE)
+write.csv(test,"cleaned_test.csv",row.names=FALSE)
+# write.csv(df,"cleaned.csv",row.names=FALSE)
 ```
 
 
