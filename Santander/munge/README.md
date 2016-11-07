@@ -1,1 +1,5 @@
-Here you can store any preprocessing or data munging code for your project. For example, if you need to add columns at runtime, merge normalized data sets or globally censor any data points, that code should be stored in the `munge` directory. The preprocessing scripts stored in `munge` will be executed sequentially when you call `load.project()`, so you should append numbers to the filenames to indicate their sequential order.
+AJ's `santander-cleaning.Rmd` script can be viewed here https://www.kaggle.com/apryor6/santander-product-recommendation/detailed-cleaning-visualization
+
+
+Here is an easy way to knit documents
+    ezknitr::ezspin(wd = "~/Documents/Kaggle_Comps", file = "Santander/munge/data_doc.R", fig_dir = "Santander/graphs/", keep_md = T, keep_html = F, out_dir = "Santander/doc/")
