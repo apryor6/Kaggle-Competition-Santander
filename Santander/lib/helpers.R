@@ -64,4 +64,7 @@ col_types <- cols(
   indrel = col_character()
 )
 
+theme_mells <- ggplot2::theme_bw() +
+  ggplot2::theme(strip.text = ggplot2::element_text(face = "bold", size = 12),
+                 plot.title = ggplot2::element_text(face = "bold", size = 14))
 
