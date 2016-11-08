@@ -12,10 +12,10 @@ suppressPackageStartupMessages(library(purrr))
 suppressPackageStartupMessages(library(ggplot2))
 source("Santander/lib/helpers.R")
 options(dplyr.width = Inf)
-#+ readin_data, eval = F
+
 raw_data <- read_csv("~/Documents/Data/Kaggle_Comps/Santander/train_ver2.csv", col_types = col_types)
 
-#+ missing_by_var, fig.height = 8, fig.width = 6, dpi = 100
+#+ missing_by_var, fig.height = 8, fig.width = 8, dpi = 100
 
 account_data <- select(raw_data, fecha_dato:segmento) %>% 
   make_calibration %>%
@@ -39,7 +39,7 @@ account_data %>%
 #' pretty bad with around 20% of it's observations missing. I'm going to remove
 #' those and see what patterns exist with the rest of the data. 
 #' 
-#+ missing_around, fig.width = 8, fig.width = 6, dpi = 100
+#+ missing_around, fig.width = 8, fig.width = 8, dpi = 100
 
 missing_data <- account_data %>%
   select(-leave_date, -employee_spouse, -gross_income) %>%
@@ -57,7 +57,7 @@ missing_data[missing_rows, ] %>%
   geom_raster() +
   xlab("") +
   ylab("Observation Number") +
-  ggtitle("Patterns of Missing Data Between Variables")
+  ggtitle("Patterns of Missing Data Between Variables") +
   theme_mells +
   viridis::scale_fill_viridis(discrete = T) +
   theme(axis.text.y = element_text(face = "bold", hjust = 1),
