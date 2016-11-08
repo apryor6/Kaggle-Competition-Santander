@@ -7,7 +7,7 @@ make_calibration <- function(raw_df){
 make_train <- function(raw_df){
   cal_accounts <- readRDS("Santander/cache/cal_accounts.rds")
   train_data <- dplyr::anti_join(raw_df, cal_accounts, by = "ncodpers")
-  return(train_data)
+  return(cal_data)
 }
 
 clean_names <- function(train_df){
