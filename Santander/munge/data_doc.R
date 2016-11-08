@@ -12,6 +12,10 @@ suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(knitr))
 suppressPackageStartupMessages(library(tidyr))
 suppressPackageStartupMessages(library(purrr))
+library(modeler) 
+## My own internal package, install with
+## devtools::install_github("mattmills49/modeler")
+
 source("Santander/lib/helpers.R")
 options(dplyr.width = Inf)
 
@@ -47,13 +51,35 @@ quick_look <- function(x){
 }
 
 var_info <- account_data %>%
-  map(quick_look) %>%
-  bind_rows(.id = "Variable")
+  mutate(signup_time = as.numeric(difftime(fetch_date, signup_date, units = "days"))) %>%
+  select(-customer_code, -dplyr::contains("date")) %>%
+  peruse
 
-#+
+#+ echo = F
 #save(var_info, file = "Santander/cache/var_info.rdata")
 load("Santander/cache/var_info.rdata")
-kable(var_info, caption = "Quick Look at Variables", align = "c")
+kable(select(var_info, -data, -Type), align = "c")
 
+#' ### Numeric Variables
+#' 
+#+ echo = F
+var_info %>%
+  filter(Class == "Numeric") %>%
+  select(-Class) %>%
+  unnest(data) %>% 
+  kable(align = "c")
+
+#' It looks like `new_customer`, `completed_month`, and `activity_index` are 
+#' actually binary variables that we can turn into character values.
+#' 
+#' ### Character Variables
+#' 
+#+ echo = F
+var_info %>%
+  filter(Class != "Numeric") %>%
+  select(-Class) %>%
+  mutate(most_common = map_chr(data, ~ stringr::str_c(names(.x), " - ", .x, collapse = ", "))) %>% 
+  select(-data) %>%
+  kable(align = "c")
 
 
