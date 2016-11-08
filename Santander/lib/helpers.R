@@ -1,3 +1,15 @@
+make_calibration <- function(raw_df){
+  cal_accounts <- readRDS("Santander/cache/cal_accounts.rds")
+  cal_data <- dplyr::inner_join(raw_df, cal_accounts, by = "ncodpers")
+  return(cal_data)
+}
+
+make_train <- function(raw_df){
+  cal_accounts <- readRDS("Santander/cache/cal_accounts.rds")
+  train_data <- dplyr::anti_join(raw_df, cal_accounts, by = "ncodpers")
+  return(cal_data)
+}
+
 clean_names <- function(train_df){
   good_names <- c('fecha_dato' = "fetch_date",
                   'ncodpers' = "customer_code",
@@ -51,3 +63,5 @@ col_types <- cols(
   ind_actividad_cliente = col_character(),
   indrel = col_character()
 )
+
+
