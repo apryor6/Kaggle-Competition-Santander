@@ -39,7 +39,7 @@ account_data %>%
   theme(axis.text.y = element_text(face = "bold"))
 ```
 
-![plot of chunk missing_by_var](Santander/graphs///missing_by_var-1.png)
+![plot of chunk missing_by_var](../graphs///missing_by_var-1.png)
 
 Clearly there are 2 crazy bad variables, `leave_date` and `employee_spouse`,
 with nearly 100% of their observations missing. `gross_income` is also
@@ -68,7 +68,7 @@ missing_data[missing_rows, ] %>%
   ggtitle("Patterns of Missing Data Between Variables")
 ```
 
-![plot of chunk missing_around](Santander/graphs///missing_around-1.png)
+![plot of chunk missing_around](../graphs///missing_around-1.png)
 
 ```r
   theme_mells +
