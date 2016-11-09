@@ -1,0 +1,39 @@
+---
+title: "feature-analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(corrplot)
+library(plyr)
+library(dplyr)
+library(data.table)
+library(ClustOfVar)
+```
+
+```{r}
+setwd("~/kaggle/competition-sandtander/")
+df <- as.data.frame(fread("cleaned_train.csv"))
+limit.rows <- 1e4
+df <- df[sample(nrow(df),limit.rows),]
+```
+
+```{r}
+continuous.vars <- c("age","antiguedad","renta")
+# df$fecha_alta <- as.numeric(as.POSIXct(df$fecha_alta))
+df[,continuous.vars] <- lapply(df[,continuous.vars],as.numeric)
+corrplot(cor(df[,continuous.vars],method="pearson"))
+```
+
+```{r}
+factor.names <- names(df)[!grepl("ind_+.*_+.*",names(df))]
+factor.names <- factor.names[!factor.names %in% c(continuous.vars,names(df)[grep("month|ncodpers|fecha",names(df))])]
+# df <- df[,factor.names,with=FALSE]
+df[,factor.names] <- lapply(df[,factor.names],as.factor)
+df <- df[,!names(df) %in% c("ncodpers","fecha_alta","fecha_dato")]
+# df2 <- as.data.frame(lapply(df,function(x) as.numeric(as.factor(x))))
+clust <- hclustvar(X.quanti = df[,continuous.vars], X.quali = df[,factor.names])
+plot(clust)
+```
+
