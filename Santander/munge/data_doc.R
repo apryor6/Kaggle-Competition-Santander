@@ -62,4 +62,20 @@ var_info %>%
   select(-data) %>%
   kable(align = "c")
 
+#' ### Variable Drift
+#' 
+#' The data is structured as monthly measurements for accounts for 17 months. 
+#' I'm curious to find out how often the variables change month to month. 
+#' 
+#+
 
+cal_data <- train_data %>%
+  make_calibration %>%
+  clean_names %>%
+  select(fetch_date:segment)
+
+cal_data %>% 
+  sample_frac(.1) %>%
+  group_by(customer_code) %>%
+  summarise_all(n_distinct) %>% head
+  
