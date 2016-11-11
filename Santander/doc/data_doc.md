@@ -97,9 +97,6 @@ I'm curious to find out how often the variables change month to month.
 
 
 ```r
-suppressPackageStartupMessages(library(ggplot2))
-suppressPackageStartupMessages(library(data.table))
-
 cal_data <- train_data %>%
   make_calibration %>%
   clean_names %>%
@@ -131,57 +128,8 @@ account_nums %>%
 ```
 
 ```
-## Error in eval(expr, envir, enclos): object 'account_nums' not found
+## Warning: Stacking not well defined when ymin != 0
 ```
 
-```r
-cal_data %>% 
-  sample_frac(.1) %>%
-  group_by(customer_code) %>%
-  summarise_all(n_distinct) %>% head
-```
-
-```
-## # A tibble: 6 × 24
-##   customer_code fetch_date employee_index country_residence   sex   age
-##           <int>      <int>          <int>             <int> <int> <int>
-## 1         15890          3              1                 1     1     2
-## 2         15892          2              1                 1     1     1
-## 3         15895          4              1                 1     1     1
-## 4         15896          2              1                 1     1     1
-## 5         15898          1              1                 1     1     1
-## 6         15899          1              1                 1     1     1
-##   signup_date new_customer seniority completed_month leave_date
-##         <int>        <int>     <int>           <int>      <int>
-## 1           1            1         3               1          1
-## 2           1            1         2               1          1
-## 3           1            1         4               1          1
-## 4           1            1         2               1          1
-## 5           1            1         1               1          1
-## 6           1            1         1               1          1
-##   customer_type customer_relation residence_same_as_bank foreigner
-##           <int>             <int>                  <int>     <int>
-## 1             1                 1                      1         1
-## 2             1                 1                      1         1
-## 3             1                 1                      1         1
-## 4             1                 1                      1         1
-## 5             1                 1                      1         1
-## 6             1                 1                      1         1
-##   employee_spouse join_channel  dead addres_type province_code
-##             <int>        <int> <int>       <int>         <int>
-## 1               1            1     1           1             1
-## 2               1            1     1           1             1
-## 3               1            1     1           1             1
-## 4               1            1     1           1             1
-## 5               1            1     1           1             1
-## 6               1            1     1           1             1
-##   province_name activity_index gross_income segment
-##           <int>          <int>        <int>   <int>
-## 1             1              1            1       2
-## 2             1              1            1       1
-## 3             1              1            1       1
-## 4             1              1            1       2
-## 5             1              1            1       1
-## 6             1              1            1       1
-```
+![plot of chunk var_drift](../graphs///var_drift-1.png)
 

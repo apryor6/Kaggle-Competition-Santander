@@ -6,12 +6,14 @@
 #' This should make it easier for us to pick up the project if we get busy and
 #' can't work on it every other day. 
 #' 
-#+ package_load, echo = F, eval = F
+#+ package_load, echo = F
 suppressPackageStartupMessages(library(readr))
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(knitr))
 suppressPackageStartupMessages(library(tidyr))
 suppressPackageStartupMessages(library(purrr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(data.table))
 library(modeler) 
 ## My own internal package, install with
 ## devtools::install_github("mattmills49/modeler")
@@ -68,8 +70,7 @@ var_info %>%
 #' I'm curious to find out how often the variables change month to month. 
 #' 
 #+ var_drift, fig.height = 10, fig.width = 6
-suppressPackageStartupMessages(library(ggplot2))
-suppressPackageStartupMessages(library(data.table))
+
 
 cal_data <- train_data %>%
   make_calibration %>%
@@ -93,9 +94,4 @@ account_nums %>%
   scale_y_continuous(trans = "log") +
   theme(strip.text = element_text(face = "bold", size = 10)) +
   ggtitle("Number of Different Values for Accounts by Variable")
-
-cal_data %>% 
-  sample_frac(.1) %>%
-  group_by(customer_code) %>%
-  summarise_all(n_distinct) %>% head
   
