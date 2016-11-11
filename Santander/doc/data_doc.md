@@ -10,7 +10,7 @@ can't work on it every other day.
 
 
 ```r
-train_data <- read_csv("~/Documents/Data/Kaggle_Comps/Santander/train_ver2.csv", col_types = col_types)
+train_data <- read_csv("~/Documents/Data/Kaggle_Comps/Santander/train_ver2.csv", col_types = col_types, progress = F)
 
 account_data <- select(train_data, fecha_dato:segmento) %>% clean_names
 
@@ -88,4 +88,100 @@ actually binary variables that we can turn into character values.
 |          dead          |  Binary   |    27734    |     3      |                                    N - 13584813, S - 34762                                     |
 |     province_name      | Character |      0      |     53     | BARCELONA - 1275219, CORUÑA, A - 429322, MADRID - 4409600, SEVILLA - 605164, VALENCIA - 682304 |
 |        segment         | Character |   189368    |     4      |          01 - TOP - 562142, 02 - PARTICULARES - 7960220, 03 - UNIVERSITARIO - 4935579          |
+
+### Variable Drift
+
+The data is structured as monthly measurements for accounts for 17 months. 
+I'm curious to find out how often the variables change month to month. 
+
+
+
+```r
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(data.table))
+
+cal_data <- train_data %>%
+  make_calibration %>%
+  clean_names %>%
+  select(fetch_date:segment)
+
+cols <- names(cal_data)[!(names(cal_data) %in% c("fetch_date", "age", "signup_date"))]
+
+cal_df <- as.data.table(cal_data)
+account_nums <- cal_df[, cols, with = F][, lapply(.SD, n_distinct), by = customer_code]
+```
+
+```
+## Error in .subset(x, j): invalid subscript type 'list'
+```
+
+```r
+account_nums %>%
+  as.tbl %>%
+  gather(Variable, Number, -customer_code) %>%
+  ggplot(aes(x = Number)) +
+  geom_histogram(binwidth = 1, boundary = 0) +
+  facet_wrap(~Variable, nrow = 5, ncol = 4) +
+  theme_mells +
+  ylab("") +
+  xlab("") +
+  scale_y_continuous(trans = "log") +
+  theme(strip.text = element_text(face = "bold", size = 10)) +
+  ggtitle("Number of Different Values for Accounts by Variable")
+```
+
+```
+## Error in eval(expr, envir, enclos): object 'account_nums' not found
+```
+
+```r
+cal_data %>% 
+  sample_frac(.1) %>%
+  group_by(customer_code) %>%
+  summarise_all(n_distinct) %>% head
+```
+
+```
+## # A tibble: 6 × 24
+##   customer_code fetch_date employee_index country_residence   sex   age
+##           <int>      <int>          <int>             <int> <int> <int>
+## 1         15890          3              1                 1     1     2
+## 2         15892          2              1                 1     1     1
+## 3         15895          4              1                 1     1     1
+## 4         15896          2              1                 1     1     1
+## 5         15898          1              1                 1     1     1
+## 6         15899          1              1                 1     1     1
+##   signup_date new_customer seniority completed_month leave_date
+##         <int>        <int>     <int>           <int>      <int>
+## 1           1            1         3               1          1
+## 2           1            1         2               1          1
+## 3           1            1         4               1          1
+## 4           1            1         2               1          1
+## 5           1            1         1               1          1
+## 6           1            1         1               1          1
+##   customer_type customer_relation residence_same_as_bank foreigner
+##           <int>             <int>                  <int>     <int>
+## 1             1                 1                      1         1
+## 2             1                 1                      1         1
+## 3             1                 1                      1         1
+## 4             1                 1                      1         1
+## 5             1                 1                      1         1
+## 6             1                 1                      1         1
+##   employee_spouse join_channel  dead addres_type province_code
+##             <int>        <int> <int>       <int>         <int>
+## 1               1            1     1           1             1
+## 2               1            1     1           1             1
+## 3               1            1     1           1             1
+## 4               1            1     1           1             1
+## 5               1            1     1           1             1
+## 6               1            1     1           1             1
+##   province_name activity_index gross_income segment
+##           <int>          <int>        <int>   <int>
+## 1             1              1            1       2
+## 2             1              1            1       1
+## 3             1              1            1       1
+## 4             1              1            1       2
+## 5             1              1            1       1
+## 6             1              1            1       1
+```
 
