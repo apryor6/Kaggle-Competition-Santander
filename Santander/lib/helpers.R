@@ -35,7 +35,30 @@ clean_names <- function(train_df){
                   'ind_actividad_cliente' = "activity_index",
                   'renta' = "gross_income",
                   'segmento' = "segment",
-                  'ind_ahor_fin_ult1' = 'ind_ahor_fin_ult1', 'ind_aval_fin_ult1' = 'ind_aval_fin_ult1', 'ind_cco_fin_ult1' = 'ind_cco_fin_ult1', 'ind_cder_fin_ult1' = 'ind_cder_fin_ult1', 'ind_cno_fin_ult1' = 'ind_cno_fin_ult1', 'ind_ctju_fin_ult1' = 'ind_ctju_fin_ult1', 'ind_ctma_fin_ult1' = 'ind_ctma_fin_ult1', 'ind_ctop_fin_ult1' = 'ind_ctop_fin_ult1', 'ind_ctpp_fin_ult1' = 'ind_ctpp_fin_ult1', 'ind_deco_fin_ult1' = 'ind_deco_fin_ult1', 'ind_deme_fin_ult1' = 'ind_deme_fin_ult1', 'ind_dela_fin_ult1' = 'ind_dela_fin_ult1', 'ind_ecue_fin_ult1' = 'ind_ecue_fin_ult1', 'ind_fond_fin_ult1' = 'ind_fond_fin_ult1', 'ind_hip_fin_ult1' = 'ind_hip_fin_ult1', 'ind_plan_fin_ult1' = 'ind_plan_fin_ult1', 'ind_pres_fin_ult1' = 'ind_pres_fin_ult1', 'ind_reca_fin_ult1' = 'ind_reca_fin_ult1', 'ind_tjcr_fin_ult1' = 'ind_tjcr_fin_ult1', 'ind_valo_fin_ult1' = 'ind_valo_fin_ult1', 'ind_viv_fin_ult1' = 'ind_viv_fin_ult1', 'ind_nomina_ult1' = 'ind_nomina_ult1', 'ind_nom_pens_ult1' = 'ind_nom_pens_ult1', 'ind_recibo_ult1' = 'ind_recibo_ult1')
+                  'ind_ahor_fin_ult1' = 'savings',
+                  'ind_aval_fin_ult1' = 'guarentees',
+                  'ind_cco_fin_ult1' = 'current_accounts',
+                  'ind_cder_fin_ult1' = 'derivative',
+                  'ind_cno_fin_ult1' = 'payroll_account',
+                  'ind_ctju_fin_ult1' = 'junior',
+                  'ind_ctma_fin_ult1' = 'particular_mas',
+                  'ind_ctop_fin_ult1' = 'particular',
+                  'ind_ctpp_fin_ult1' = 'particular_plus',
+                  'ind_deco_fin_ult1' = 'deposits_short_term',
+                  'ind_deme_fin_ult1' = 'deposits_medium_term',
+                  'ind_dela_fin_ult1' = 'deposits_long_term',
+                  'ind_ecue_fin_ult1' = 'e_account',
+                  'ind_fond_fin_ult1' = 'funds',
+                  'ind_hip_fin_ult1' = 'mortgage',
+                  'ind_plan_fin_ult1' = 'pensions',
+                  'ind_pres_fin_ult1' = 'loans',
+                  'ind_reca_fin_ult1' = 'taxes',
+                  'ind_tjcr_fin_ult1' = 'credit_card',
+                  'ind_valo_fin_ult1' = 'securities',
+                  'ind_viv_fin_ult1' = 'home_account',
+                  'ind_nomina_ult1' = 'payroll',
+                  'ind_nom_pens_ult1' = 'pensions_2',
+                  'ind_recibo_ult1' = 'direct_debit')
   
   colnames(train_df) <- good_names[colnames(train_df)]
   return(train_df)
