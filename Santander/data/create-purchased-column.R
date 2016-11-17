@@ -13,7 +13,7 @@ for (label in labels){
   colx  <- paste0(label,".x")
   coly  <- paste0(label,".y")
   diffs <- df[,.(get(colx)-get(coly))]
-  products[diffs>0] <- paste(products[diffs>0],label)
+  products[diffs>0] <- paste0(products[diffs>0],label,sep=" ")
 }
 
 df <- df[,.(ncodpers,month.id,products)]
