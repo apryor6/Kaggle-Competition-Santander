@@ -8,29 +8,27 @@ library(ggplot2)
 library(caret)
 library(pROC)
 set.seed(1)
-df   <- fread("cleaned_train.csv")
-test <- fread("cleaned_test.csv")
+df   <- as.data.frame(fread("cleaned_train.csv"))
+test <- as.data.frame(fread("cleaned_test.csv"))
 df$sexo[df$sexo=="UNKNOWN"] <- "V"
-# df$sexo <- droplevels(df$sexo)
 test$sexo[test$sexo=="UNKNOWN"] <- "V"
-# df <- df%>% select(-ind_empleado)
-# test <- test%>% select(-ind_empleado)
 
-test <- merge(test,df %>%
-                dplyr::select(ind_ahor_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id"),all.x=TRUE) %>%
-  as.data.frame()
-test[is.na(test)] <- 0
+# test <- merge(test,df %>%
+                # dplyr::select(ind_ahor_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id"),all.x=TRUE) %>%
+  # as.data.frame()
+# test[is.na(test)] <- 0
 
 
 # df <- df %>%
 # arrange(desc(ncodpers)) %>%
 # slice(1:1000000) # no need to use all of the data until we want to make an actual submission
 
+# Get the previous month's ownership information
 
 df <- merge(df,df %>%
               dplyr::select(ind_ahor_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id")) %>%as.data.frame()
 
-df <- df[sample(nrow(df),2e6),]
+df <- df[sample(nrow(df),1e5),]
 new.names <- names(df)
 new.names[grepl("ind.*\\.y",new.names)] <- gsub("\\.y","",new.names[grepl("ind.*\\.y",new.names)])
 
@@ -41,20 +39,22 @@ names(df) <- new.names
 labels <- names(df)[grepl(".*_target",names(df))]
 drop.labels <- c("ind_ctju_fin_ult1_target", "ind_aval_fin_ult1_target")
 labels <- labels[!labels %in% drop.labels]
-numeric.cols <- c("age","renta","antiguedad","month")
+numeric.cols <- c("age","renta","antiguedad")
 # numeric.cols <- c("age","renta","antiguedad","month",
-                  # gsub("_target","",labels))
+#                   # gsub("_target","",labels)[1:7])
 # categorical.cols <- names(df)[!names(df) %in% c("ncodpers","month.id",labels,numeric.cols)]
-categorical.cols<-c("sexo","nomprov")
+categorical.cols<-c("sexo","nomprov","month")
 
+df$month <- as.factor(month.abb[df$month])
+test$month <- as.factor(month.abb[test$month])
 print(labels)
 
-for (label in labels){
-  base <- gsub("_target","",label)
-  vals <- (rowSums(df[,c(base,label)]))
-  print(table(vals))
-  
-}
+# for (label in labels){
+#   base <- gsub("_target","",label)
+#   vals <- (rowSums(df[,c(base,label)]))
+#   print(table(vals))
+#   
+# }
 
 test$ind_empleado[test$ind_empleado=="S"] <- "N" # Some rare value that was causing errors with factors later
 char.cols <- names(test)[sapply(test,is.character)]
@@ -117,10 +117,11 @@ df <- df %>%
   dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id,ind_ctju_fin_ult1_target,ind_ctju_fin_ult1)
 
 test <- test %>% 
-  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id)
+  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id) %>%
+  as.data.frame()
 ohe <- dummyVars(~.,data = df[,names(df) %in% categorical.cols])
 ohe <- as(data.matrix(predict(ohe,df[,names(df) %in% categorical.cols])), "dgCMatrix")
-
+##LEFT OFF HERE
 ohe.test <- dummyVars(~.,data = test[,names(test) %in% categorical.cols])
 ohe.test <- as(data.matrix(predict(ohe.test,test[,names(test) %in% categorical.cols])), "dgCMatrix")
 train.labels        <- list()
@@ -153,21 +154,11 @@ predictions <- as.data.table(predictions)
 predictions_val <- as.data.table(predictions_val)
 test        <- as.data.table(cbind(data.frame(data.matrix(test)),predictions))
 val        <- as.data.table(cbind(data.frame(data.matrix(df[-train.ind,])),predictions_val))
-# 
-# test <- test %>%
-#   dplyr::select(-(ind_empleado:segmento),-month)
-# val <- val %>%
-#   dplyr::select(-(ind_empleado:segmento),-month)
 
-# test <- test %>%
-  # dplyr::select(one_of(names(test)[grepl("_pred",names(test))]))
-# test <- test[,grepl("_pred",names(test)),with=FALSE]
 test <- test[,grepl("ind_+.*_+.*_",names(test)),with=FALSE]
 test$ncodpers <- save.id.test
 test$month.id <- save.month.id.test
-# test <- cbind(list("ncodpers"=save.id.test,"month.id"=save.month.id.test),test)
-# val <- val %>%
-  # dplyr::select(one_of(names(val)[grepl("_pred",names(val))]))
+
 val <- val[,grepl("ind_+.*_+.*_",names(val)),with=FALSE]
 # val <- cbind(list("ncodpers"=save.id.test[-train.ind],"month.id"=save.month.id.test[-train.ind]),val)
 val$ncodpers <- save.id[-train.ind]
@@ -177,9 +168,10 @@ products <- gsub("_target","",labels)
 full <- as.data.frame(fread("cleaned_train.csv"))
 
 owned.products <- names(test)[grepl("ind_+.*_+.*_",names(test)) & !(grepl("_pred",names(test)))]
+if (length(owned.products)!=0){
 test <- test[,!names(test) %in% owned.products, with=FALSE]
 val  <- val[,!names(val) %in% owned.products, with=FALSE]
-
+}
 test <- merge(test %>%
                 mutate(month.previous.id = month.id-1),
               full %>%
