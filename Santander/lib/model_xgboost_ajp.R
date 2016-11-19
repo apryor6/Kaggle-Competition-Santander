@@ -28,6 +28,9 @@ test$sexo[test$sexo=="UNKNOWN"] <- "V"
 df <- merge(df,df %>%
               dplyr::select(ind_ahor_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id")) %>%as.data.frame()
 
+# df <- df %>%
+  # filter(fecha_dato%in%c("2015-06-28","2015-05-28","2015-04-28"))
+
 df <- df[sample(nrow(df),1e5),]
 new.names <- names(df)
 new.names[grepl("ind.*\\.y",new.names)] <- gsub("\\.y","",new.names[grepl("ind.*\\.y",new.names)])
@@ -45,8 +48,8 @@ numeric.cols <- c("age","renta","antiguedad")
 # categorical.cols <- names(df)[!names(df) %in% c("ncodpers","month.id",labels,numeric.cols)]
 categorical.cols<-c("sexo","nomprov","month")
 
-df$month <- as.factor(month.abb[df$month])
-test$month <- as.factor(month.abb[test$month])
+df$month <- factor(month.abb[df$month],levels=month.abb)
+test$month <- factor(month.abb[test$month],levels=month.abb)
 print(labels)
 
 # for (label in labels){
@@ -100,7 +103,7 @@ build.predictions.xgboost <- function(df, test, features, label, label.name){
   # test <- data.matrix(test)
   # dtest <- xgb.DMatrix(data = data.matrix(test[,names(test) %in% features]), label=data.matrix(test[[label]]))
   model <- xgboost(data = dtrain,
-                   max.depth = 5, 
+                   max.depth = 10, 
                    eta = 1, nthread = 2,
                    nround = 15, 
                    objective = "binary:logistic", 
