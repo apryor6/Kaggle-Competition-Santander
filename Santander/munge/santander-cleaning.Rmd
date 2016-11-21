@@ -2,7 +2,6 @@
 title: "Detailed Data Cleaning/Visualization"
 output: html_document
 ---
-test
 
 ```{r setup, include=FALSE, echo=TRUE, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message=FALSE)
