@@ -3,11 +3,12 @@
 library(data.table)
 setwd('~/kaggle/competition-sandtander/')
 df     <- fread("cleaned_train.csv")
-labels <- names(df)[grepl("ind_+.*_+.*_",names(df))]
-cols   <- c("ncodpers","month.id","month.previous.id",names(df)[grepl("ind_+.*_+.*_",names(df))])
+labels <- names(df)[grepl("ind_+.*_+ult",names(df))]
+cols   <- c("ncodpers","month.id","month.previous.id",labels)
 df     <- df[,names(df) %in% cols,with=F]
-df     <- merge(df,df,by.x=c("ncodpers","month.previous.id"),by.y=c("ncodpers","month.id"))
+df     <- merge(df,df,by.x=c("ncodpers","month.previous.id"),by.y=c("ncodpers","month.id"),all.x=TRUE)
 
+df[is.na(df)] <- 0
 products <- rep("",nrow(df))
 for (label in labels){
   colx  <- paste0(label,".x")
@@ -18,3 +19,4 @@ for (label in labels){
 
 df <- df[,.(ncodpers,month.id,products)]
 write.csv(df,"purchased-products.csv",row.names=FALSE)
+print(dim(df[df$month.id==6 & df$products!="",]))

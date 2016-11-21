@@ -39,8 +39,8 @@ Limit the number of rows read in to avoid memory crashes with the kernel
 ```{r message=FALSE, warning=FALSE}
 setwd("~/kaggle/competition-sandtander/")
 set.seed(1)
-df   <- as.data.frame(fread("train_ver2.csv"))
-test <- as.data.frame(fread("test_ver2.csv"))
+df   <- (fread("train_ver2.csv"))
+test <- (fread("test_ver2.csv"))
 features <- names(df)[grepl("ind_+.*ult.*",names(df))]
 ```
 
@@ -48,15 +48,14 @@ I will create a label for each product and month that indicates whether a custom
 A cool trick to turn dates into unique id numbers is to use `as.numeric(factor(...))`. Make sure to order them chronologically first.
 
 ```{r message=FALSE, warning=FALSE}
-df                     <- df %>% arrange(fecha_dato)
+df                     <- df %>% arrange(fecha_dato) %>% as.data.table()
 df$month.id            <- as.numeric(factor((df$fecha_dato)))
 df$month.previous.id   <- df$month.id - 1
 test$month.id          <- max(df$month.id) + 1
 test$month.previous.id <- max(df$month.id)
 
 # Test data will contain the status of products for the previous month, which is a feature. The training data currently contains the status of products as labels, and will later be joined to the previous month to get the previous month's ownership as a feature. I choose to do it in this order so that the train/test data can be cleaned together and then split. It's just for convenience.
-test <- test %>%
-  merge(df[,names(df) %in% c(features,"ncodpers","month.id")],by.x=c("ncodpers","month.previous.id"),by.y=c("ncodpers","month.id"))
+test <- merge(test,df[,names(df) %in% c(features,"ncodpers","month.id"),with=FALSE],by.x=c("ncodpers","month.previous.id"),by.y=c("ncodpers","month.id"),all.x=TRUE)
 
 df <- rbind(df,test)
 
@@ -147,9 +146,9 @@ Yup, same people. Let's give them minimum seniority.
 ```{r message=FALSE, warning=FALSE}
 
 # For the cleaning version I am removing these entries
-df <- df[(!is.na(df$antiguedad)) | df$month.id==max(df$month.id),]
-# df$antiguedad[is.na(df$antiguedad)] <- min(df$antiguedad,na.rm=TRUE)
-# df$antiguedad[df$antiguedad<0] <- 0
+# df <- df[(!is.na(df$antiguedad)) | df$month.id==max(df$month.id),]
+df$antiguedad[is.na(df$antiguedad)] <- min(df$antiguedad,na.rm=TRUE)
+df$antiguedad[df$antiguedad<0] <- 0
 ```
 
 Some entries don't have the date they joined the company. Just give them something in the middle of the pack

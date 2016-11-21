@@ -7,6 +7,9 @@ library(data.table)
 library(ggplot2)
 library(caret)
 library(pROC)
+source('get_recommendations.R')
+source('MAP.R')
+
 set.seed(1)
 df   <- (fread("cleaned_train.csv"))
 test <- as.data.frame(fread("cleaned_test.csv"))
@@ -34,7 +37,7 @@ new.names[grepl("ind.*\\.x",new.names)] <- gsub("\\.x","_target",new.names[grepl
 names(df) <- new.names
 
 labels <- names(df)[grepl(".*_target",names(df))]
-products <- names(df)[grepl("ind_+.*_+.*_+.*",names(df)) & !grepl(".*_target",names(df))]
+products <- names(df)[grepl("ind_+.*_+ult",names(df)) & !grepl(".*_target",names(df))]
 
 drop.labels <- c("ind_ctju_fin_ult1_target", "ind_aval_fin_ult1_target")
 labels <- labels[!labels %in% drop.labels]
@@ -157,11 +160,11 @@ predictions_val <- as.data.table(predictions_val)
 test        <- as.data.table(cbind(data.frame(data.matrix(test)),predictions))
 val        <- as.data.table(cbind(data.frame(data.matrix(df[-train.ind,])),predictions_val))
 
-test <- test[,grepl("ind_+.*_+.*_",names(test)),with=FALSE]
+test <- test[,grepl("ind_+.*_+ult",names(test)),with=FALSE]
 test$ncodpers <- save.id.test
 test$month.id <- save.month.id.test
 
-val <- val[,grepl("ind_+.*_+.*_",names(val)),with=FALSE]
+val <- val[,grepl("ind_+.*_+ult",names(val)),with=FALSE]
 # val <- cbind(list("ncodpers"=save.id.test[-train.ind],"month.id"=save.month.id.test[-train.ind]),val)
 val$ncodpers <- save.id[-train.ind]
 val$month.id <- save.month.id[-train.ind]
@@ -169,7 +172,7 @@ products <- gsub("_target","",labels)
 
 full <- as.data.frame(fread("cleaned_train.csv"))
 
-owned.products <- names(test)[grepl("ind_+.*_+.*_",names(test)) & !(grepl("_pred",names(test)))]
+owned.products <- names(test)[grepl("ind_+.*_+ult",names(test)) & !(grepl("_pred",names(test)))]
 if (length(owned.products)!=0){
 test <- test[,!names(test) %in% owned.products, with=FALSE]
 val  <- val[,!names(val) %in% owned.products, with=FALSE]
