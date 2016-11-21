@@ -30,7 +30,7 @@ df <- df %>%
 df <- df %>%
   group_by(ncodpers,month.id) %>%
   arrange(desc(score)) %>%
-  slice(1:n.recs) %>%
+  dplyr::slice(1:n.recs) %>%
   dplyr::summarise(added_products=paste.strings(product)) %>%
   dplyr::select(ncodpers,added_products)
 

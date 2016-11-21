@@ -39,24 +39,29 @@ Limit the number of rows read in to avoid memory crashes with the kernel
 ```{r message=FALSE, warning=FALSE}
 setwd("~/kaggle/competition-sandtander/")
 set.seed(1)
-# df <- fread("df_small.csv")
-# limit.rows <- 1000000
-df   <- as.data.frame(fread("train_ver2.csv",nrows=-1))
-features <- grepl("ind_+.*ult.*",names(df))
+df   <- as.data.frame(fread("train_ver2.csv"))
 test <- as.data.frame(fread("test_ver2.csv"))
-test <- cbind(test,df[1:nrow(test),features])
-
-
-
-# df <- df %>% arrange(ncodpers) %>% slice(1:limit.rows)
-unique.id <- unique(df$ncodpers)
-# limit.people <- 1e2
-# unique.id <- unique.id[sample(length(unique.id),limit.people)]
-# df <- df[df$ncodpers %in% unique.id,]
-# df <- df[sample(nrow(df),limit.rows),]
-# df <- fread("train_ver2.csv",nrows=limit.rows)
-str(df)
+features <- names(df)[grepl("ind_+.*ult.*",names(df))]
 ```
+
+I will create a label for each product and month that indicates whether a customer added, dropped or maintained that service in that billing cycle. I will do this by assigning a numeric id to each unique time stamp, and then matching each entry with the one from the previous month. The difference in the indicator value for each product then gives the desired value.  
+A cool trick to turn dates into unique id numbers is to use `as.numeric(factor(...))`. Make sure to order them chronologically first.
+
+```{r message=FALSE, warning=FALSE}
+df                     <- df %>% arrange(fecha_dato)
+df$month.id            <- as.numeric(factor((df$fecha_dato)))
+df$month.previous.id   <- df$month.id - 1
+test$month.id          <- max(df$month.id) + 1
+test$month.previous.id <- max(df$month.id)
+
+# Test data will contain the status of products for the previous month, which is a feature. The training data currently contains the status of products as labels, and will later be joined to the previous month to get the previous month's ownership as a feature. I choose to do it in this order so that the train/test data can be cleaned together and then split. It's just for convenience.
+test <- test %>%
+  merge(df[,names(df) %in% c(features,"ncodpers","month.id")],by.x=c("ncodpers","month.previous.id"),by.y=c("ncodpers","month.id"))
+
+df <- rbind(df,test)
+
+```
+
 
 We have a number of demographics for each individual as well as the products they currently own. To make a test set, I will separate the last month from this training data, and create a feature that indicates whether or not a product was newly purchased. First convert the dates. There's `fecha_dato`, the row-identifier date, and `fecha_alta`, the date that the customer joined.
 
@@ -142,7 +147,7 @@ Yup, same people. Let's give them minimum seniority.
 ```{r message=FALSE, warning=FALSE}
 
 # For the cleaning version I am removing these entries
-df <- df[!is.na(df$antiguedad),]
+df <- df[(!is.na(df$antiguedad)) | df$month.id==max(df$month.id),]
 # df$antiguedad[is.na(df$antiguedad)] <- min(df$antiguedad,na.rm=TRUE)
 # df$antiguedad[df$antiguedad<0] <- 0
 ```
@@ -313,26 +318,16 @@ df[,features] <- lapply(df[,features],function(x)as.integer(round(x)))
 ```
 
 
-Now for the main event. To study trends in customers adding or removing services, I will create a label for each product and month that indicates whether a customer added, dropped or maintained that service in that billing cycle. I will do this by assigning a numeric id to each unique time stamp, and then matching each entry with the one from the previous month. The difference in the indicator value for each product then gives the desired value.  
-A cool trick to turn dates into unique id numbers is to use `as.numeric(factor(...))`. Make sure to order them chronologically first.
-
-```{r message=FALSE, warning=FALSE}
-df <- df %>% arrange(fecha_dato)
-df$month.id <- as.numeric(factor((df$fecha_dato)))
-df$month.previous.id <- df$month.id - 1
-```
 
 ```{r}
 features <- names(df)[grepl("ind_+.*ult.*",names(df))]
 
 test <- df %>%
-  filter(month.id==max(df$month.id) & ncodpers %in% unique(test$ncodpers)) %>%
-  select(-one_of(features))
+  filter(month.id==max(df$month.id))
 df <- df %>%
   filter(month.id<max(df$month.id))
 write.csv(df,"cleaned_train.csv",row.names=FALSE)
 write.csv(test,"cleaned_test.csv",row.names=FALSE)
-# write.csv(df,"cleaned.csv",row.names=FALSE)
 ```
 
 

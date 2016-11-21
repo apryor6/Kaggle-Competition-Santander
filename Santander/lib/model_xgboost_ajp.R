@@ -8,30 +8,24 @@ library(ggplot2)
 library(caret)
 library(pROC)
 set.seed(1)
-df   <- as.data.frame(fread("cleaned_train.csv"))
+df   <- (fread("cleaned_train.csv"))
 test <- as.data.frame(fread("cleaned_test.csv"))
-df$sexo[df$sexo=="UNKNOWN"] <- "V"
-test$sexo[test$sexo=="UNKNOWN"] <- "V"
-
-# test <- merge(test,df %>%
-                # dplyr::select(ind_ahor_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id"),all.x=TRUE) %>%
-  # as.data.frame()
-# test[is.na(test)] <- 0
-
-
-# df <- df %>%
-# arrange(desc(ncodpers)) %>%
-# slice(1:1000000) # no need to use all of the data until we want to make an actual submission
-
-# Get the previous month's ownership information
 
 df <- merge(df,df %>%
               dplyr::select(ind_ahor_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id")) %>%as.data.frame()
 
-# df <- df %>%
-  # filter(fecha_dato%in%c("2015-06-28","2015-05-28","2015-04-28"))
+df <- df %>%
+  filter(fecha_dato%in%c("2015-06-28"))
 
-df <- df[sample(nrow(df),1e5),]
+df$sexo[df$sexo=="UNKNOWN"] <- "V"
+test$sexo[test$sexo=="UNKNOWN"] <- "V"
+
+purchased <- as.data.frame(fread("purchased-products.csv"))
+ids <- purchased$ncodpers[purchased$month.id == 6 & (purchased$products!="")]
+
+df <- df[df$ncodpers %in% ids,]
+
+# df <- df[sample(nrow(df),1e5),]
 new.names <- names(df)
 new.names[grepl("ind.*\\.y",new.names)] <- gsub("\\.y","",new.names[grepl("ind.*\\.y",new.names)])
 
@@ -40,16 +34,20 @@ new.names[grepl("ind.*\\.x",new.names)] <- gsub("\\.x","_target",new.names[grepl
 names(df) <- new.names
 
 labels <- names(df)[grepl(".*_target",names(df))]
+products <- names(df)[grepl("ind_+.*_+.*_+.*",names(df)) & !grepl(".*_target",names(df))]
+
 drop.labels <- c("ind_ctju_fin_ult1_target", "ind_aval_fin_ult1_target")
 labels <- labels[!labels %in% drop.labels]
-numeric.cols <- c("age","renta","antiguedad")
+numeric.cols <- c("age","renta","antiguedad","month")
 # numeric.cols <- c("age","renta","antiguedad","month",
 #                   # gsub("_target","",labels)[1:7])
-# categorical.cols <- names(df)[!names(df) %in% c("ncodpers","month.id",labels,numeric.cols)]
-categorical.cols<-c("sexo","nomprov","month")
-
-df$month <- factor(month.abb[df$month],levels=month.abb)
-test$month <- factor(month.abb[test$month],levels=month.abb)
+categorical.cols <- names(df)[!names(df) %in% c("ncodpers","month.id",labels,numeric.cols,products,"month.previous.id")]
+categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
+                      "conyuemp","nomprov","indfall","indext","indresi", products)
+# categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
+                      # "conyuemp","nomprov","indfall","indext","indresi")
+# df$month <- factor(month.abb[df$month],levels=month.abb)
+# test$month <- factor(month.abb[test$month],levels=month.abb)
 print(labels)
 
 # for (label in labels){
@@ -104,11 +102,11 @@ build.predictions.xgboost <- function(df, test, features, label, label.name){
   # dtest <- xgb.DMatrix(data = data.matrix(test[,names(test) %in% features]), label=data.matrix(test[[label]]))
   model <- xgboost(data = dtrain,
                    max.depth = 10, 
-                   eta = 1, nthread = 2,
-                   nround = 15, 
+                   eta = .05, nthread = 2,
+                   nround = 100, 
                    objective = "binary:logistic", 
                    verbose =1 ,
-                   print.every.n = 1)
+                   print.every.n = 10)
   
   predictions        <- list(predict(model,test))
   names(predictions) <- paste(gsub("_target","",label.name),"_pred",sep="")
@@ -120,11 +118,12 @@ df <- df %>%
   dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id,ind_ctju_fin_ult1_target,ind_ctju_fin_ult1)
 
 test <- test %>% 
-  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id) %>%
+  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id,ind_ctju_fin_ult1) %>%
   as.data.frame()
 ohe <- dummyVars(~.,data = df[,names(df) %in% categorical.cols])
 ohe <- as(data.matrix(predict(ohe,df[,names(df) %in% categorical.cols])), "dgCMatrix")
-##LEFT OFF HERE
+print("CLASS TYPE:")
+print(class(test))
 ohe.test <- dummyVars(~.,data = test[,names(test) %in% categorical.cols])
 ohe.test <- as(data.matrix(predict(ohe.test,test[,names(test) %in% categorical.cols])), "dgCMatrix")
 train.labels        <- list()
@@ -183,7 +182,7 @@ test <- merge(test %>%
 val <- merge(val %>%
                 mutate(month.previous.id = month.id-1),
               full %>%
-                dplyr::select(ind_ahor_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id"),all.x=TRUE)
+                dplyr::select(ind_ahor_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id"))
 
 test[is.na(test)] <- 0
 val[is.na(val)]   <- 0
