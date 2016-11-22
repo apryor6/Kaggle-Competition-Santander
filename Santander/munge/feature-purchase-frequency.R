@@ -10,7 +10,7 @@ df     <- merge(df,df,by.x=c("ncodpers","month.previous.id"),by.y=c("ncodpers","
 
 df[is.na(df)] <- 0
 products <- rep("",nrow(df))
-purchase.frequencies <- data.frame(ncodpers=df$ncodpers, month.id=(df$month.id + 1))
+purchase.frequencies <- data.frame(ncodpers=df$ncodpers, month.id=(df$month.id + 2))
 for (label in labels){
   colx  <- paste0(label,".x")
   coly  <- paste0(label,".y")

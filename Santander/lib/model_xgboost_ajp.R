@@ -7,9 +7,9 @@ library(data.table)
 library(ggplot2)
 library(caret)
 library(pROC)
-source('get_recommendations.R')
-source('MAP.R')
-test
+source('project/Santander/lib/get_recommendations.R')
+source('project/Santander/lib/MAP.R')
+
 set.seed(1)
 df   <- (fread("cleaned_train.csv"))
 test <- as.data.frame(fread("cleaned_test.csv"))
@@ -42,11 +42,13 @@ products <- names(df)[grepl("ind_+.*_+ult",names(df)) & !grepl(".*_target",names
 drop.labels <- c("ind_ctju_fin_ult1_target", "ind_aval_fin_ult1_target")
 labels <- labels[!labels %in% drop.labels]
 numeric.cols <- c("age","renta","antiguedad","month")
+numeric.cols <- c("age","renta","antiguedad","month",
+                  products)
 # numeric.cols <- c("age","renta","antiguedad","month",
 #                   # gsub("_target","",labels)[1:7])
 categorical.cols <- names(df)[!names(df) %in% c("ncodpers","month.id",labels,numeric.cols,products,"month.previous.id")]
 categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
-                      "conyuemp","nomprov","indfall","indext","indresi", products)
+                      "conyuemp","nomprov","indfall","indext","indresi")
 # categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
                       # "conyuemp","nomprov","indfall","indext","indresi")
 # df$month <- factor(month.abb[df$month],levels=month.abb)
