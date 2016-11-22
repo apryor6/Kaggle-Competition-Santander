@@ -13,12 +13,20 @@ source('project/Santander/lib/MAP.R')
 set.seed(1)
 df   <- (fread("cleaned_train.csv"))
 test <- as.data.frame(fread("cleaned_test.csv"))
+drop.products <- c("ind_ahor_fin_ult1","ind_aval_fin_ult1")
+
+df   <- df[,!names(df) %in% drop.products,with=FALSE]
+test <- test[,!names(df) %in% drop.products]
 
 df <- merge(df,df %>%
-              dplyr::select(ind_ahor_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id")) %>%as.data.frame()
+              dplyr::select(ind_cco_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id")) %>%as.data.frame()
 
 df <- df %>%
   filter(fecha_dato%in%c("2015-06-28"))
+
+purchase.frequencies <- fread("purchase.frequencies.csv")
+df   <- merge(df,purchase.frequencies,by=c("month.id","ncodpers"))
+test <- merge(test,purchase.frequencies,by=c("month.id","ncodpers"))
 
 df$sexo[df$sexo=="UNKNOWN"] <- "V"
 test$sexo[test$sexo=="UNKNOWN"] <- "V"
@@ -37,16 +45,17 @@ new.names[grepl("ind.*\\.x",new.names)] <- gsub("\\.x","_target",new.names[grepl
 names(df) <- new.names
 
 labels <- names(df)[grepl(".*_target",names(df))]
-products <- names(df)[grepl("ind_+.*_+ult",names(df)) & !grepl(".*_target",names(df))]
+purchase.w <- names(df)[grepl(".*.count",names(df))]
+products <- names(df)[grepl("ind_+.*_+ult",names(df)) & !grepl(".*_target|.count",names(df))]
 
-drop.labels <- c("ind_ctju_fin_ult1_target", "ind_aval_fin_ult1_target")
-labels <- labels[!labels %in% drop.labels]
-numeric.cols <- c("age","renta","antiguedad","month")
+# drop.labels <- c("ind_aval_fin_ult1_target","ind_ahor_fin_ult1_target")
+# labels <- labels[!labels %in% drop.labels]
+# numeric.cols <- c("age","renta","antiguedad","month")
 numeric.cols <- c("age","renta","antiguedad","month",
-                  products)
+                  products, purchase.w)
 # numeric.cols <- c("age","renta","antiguedad","month",
 #                   # gsub("_target","",labels)[1:7])
-categorical.cols <- names(df)[!names(df) %in% c("ncodpers","month.id",labels,numeric.cols,products,"month.previous.id")]
+# categorical.cols <- names(df)[!names(df) %in% c("ncodpers","month.id",labels,numeric.cols,products,"month.previous.id")]
 categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
                       "conyuemp","nomprov","indfall","indext","indresi")
 # categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
