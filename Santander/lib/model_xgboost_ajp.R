@@ -25,8 +25,12 @@ df <- df %>%
   filter(fecha_dato%in%c("2015-06-28"))
 
 purchase.frequencies <- fread("purchase.frequencies.csv")
-df   <- merge(df,purchase.frequencies,by=c("month.id","ncodpers"))
-test <- merge(test,purchase.frequencies,by=c("month.id","ncodpers"))
+purchase.frequencies.later.csv <- fread("purchase.frequencies.later.csv")
+
+df   <- merge(df,purchase.frequencies,by=c("month.id","ncodpers"),all.x = TRUE)
+test <- merge(test,purchase.frequencies.later.csv,by=c("month.id","ncodpers"), all.x=TRUE)
+df[is.na(df)] <- 0
+test[is.na(test)] <- 0
 
 df$sexo[df$sexo=="UNKNOWN"] <- "V"
 test$sexo[test$sexo=="UNKNOWN"] <- "V"
@@ -121,7 +125,7 @@ build.predictions.xgboost <- function(df, test, features, label, label.name){
                    objective = "binary:logistic", 
                    verbose =1 ,
                    print.every.n = 10)
-  
+  print(xgb.importance(feature_names = colnames(df),model=model))
   predictions        <- list(predict(model,test))
   names(predictions) <- paste(gsub("_target","",label.name),"_pred",sep="")
   return(predictions)
@@ -161,8 +165,12 @@ for (label in labels){
   predictions_val <- c(predictions_val,build.predictions.xgboost(df[train.ind,],df[-train.ind,],c(numeric.cols,colnames(ohe)),train.labels[[label]][train.ind,1,drop=F],label) )
   accuracy <- mean(train.labels[[label]][-train.ind,1]==round(predictions_val[[label.count]]))
   print(sprintf("Accuracy for label %s = %f",label,accuracy))
+  if (accuracy < 1){
   print(auc(roc(train.labels[[label]][-train.ind,1],predictions_val[[label.count]])))
-  predictions <- c(predictions,build.predictions.xgboost(df,test,c(numeric.cols,colnames(ohe)),train.labels[[label]],label) )
+  } else {
+    print("auc perfect")
+  }
+    predictions <- c(predictions,build.predictions.xgboost(df,test,c(numeric.cols,colnames(ohe)),train.labels[[label]],label) )
   label.count <- label.count + 1
   
 }
