@@ -15,8 +15,8 @@ df   <- (fread("cleaned_train.csv"))
 test <- as.data.frame(fread("cleaned_test.csv"))
 
 df <- merge(df,df %>%
-              dplyr::select(ind_ahor_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id")) %>%as.data.frame()
-
+              dplyr::select(ind_ahor_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id"),all.x=TRUE) %>%as.data.frame()
+df[is.na(df)] <- 0
 df <- df %>%
   filter(fecha_dato%in%c("2015-06-28"))
 
@@ -41,14 +41,16 @@ products <- names(df)[grepl("ind_+.*_+ult",names(df)) & !grepl(".*_target",names
 
 drop.labels <- c("ind_ctju_fin_ult1_target", "ind_aval_fin_ult1_target")
 labels <- labels[!labels %in% drop.labels]
+products <- products[!products %in% gsub("_target","",drop.labels)]
 numeric.cols <- c("age","renta","antiguedad","month")
-numeric.cols <- c("age","renta","antiguedad","month",
-                  products)
+# numeric.cols <- c("age","renta","antiguedad","month",
+                  # products)
 # numeric.cols <- c("age","renta","antiguedad","month",
 #                   # gsub("_target","",labels)[1:7])
 categorical.cols <- names(df)[!names(df) %in% c("ncodpers","month.id",labels,numeric.cols,products,"month.previous.id")]
 categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
-                      "conyuemp","nomprov","indfall","indext","indresi")
+                      "conyuemp","nomprov","indfall","indext","indresi",
+                      products)
 # categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
                       # "conyuemp","nomprov","indfall","indext","indresi")
 # df$month <- factor(month.abb[df$month],levels=month.abb)
@@ -76,24 +78,6 @@ for (col in factor.cols){
 }
 df$ult_fec_cli_1t[is.na(df$ult_fec_cli_1t)] <- "UNKNOWN"
 
-
-build.predictions <- function(df, test, features, label){
-  # df:       training data
-  # test:     the data to predict on
-  # features: character vector of column names to use as features
-  # label:    string representing which column to predict
-  
-  
-  # This function can be a major source of our tuning. As long as whatever models we build produce output in the same format as this then the rest of the code won't need to be changed much
-  model      <- glm(as.formula(paste(label,paste(features,collapse=" + "),sep=" ~ ")),data=df)
-  predictions_train <- predict(model,df[,names(df) %in% features],type="response")
-  predictions       <- predict(model,test,type="response")
-  print(sprintf("Accuracy for label %s = %f",label,mean(round(predictions_train)==df[[label]])))
-  predictions <- list(predictions)
-  names(predictions) <- paste(gsub("_target","",label),"_pred",sep="")
-  return(predictions)
-}
-
 build.predictions.xgboost <- function(df, test, features, label, label.name){
   library(xgboost)
   # df:       training data
@@ -102,9 +86,6 @@ build.predictions.xgboost <- function(df, test, features, label, label.name){
   # label:    string representing which column to predict
   
   dtrain <- xgb.DMatrix(data = df, label=label)
-  # test <- data.matrix(test[,names(test) %in% features])
-  # test <- data.matrix(test)
-  # dtest <- xgb.DMatrix(data = data.matrix(test[,names(test) %in% features]), label=data.matrix(test[[label]]))
   model <- xgboost(data = dtrain,
                    max.depth = 10, 
                    eta = .05, nthread = 2,
@@ -120,10 +101,10 @@ build.predictions.xgboost <- function(df, test, features, label, label.name){
 
 
 df <- df %>% 
-  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id,ind_ctju_fin_ult1_target,ind_ctju_fin_ult1)
+  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id)
 
 test <- test %>% 
-  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id,ind_ctju_fin_ult1) %>%
+  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id) %>%
   as.data.frame()
 ohe <- dummyVars(~.,data = df[,names(df) %in% categorical.cols])
 ohe <- as(data.matrix(predict(ohe,df[,names(df) %in% categorical.cols])), "dgCMatrix")
@@ -152,8 +133,13 @@ for (label in labels){
   predictions_val <- c(predictions_val,build.predictions.xgboost(df[train.ind,],df[-train.ind,],c(numeric.cols,colnames(ohe)),train.labels[[label]][train.ind,1,drop=F],label) )
   accuracy <- mean(train.labels[[label]][-train.ind,1]==round(predictions_val[[label.count]]))
   print(sprintf("Accuracy for label %s = %f",label,accuracy))
+  if (accuracy < 1){
   print(auc(roc(train.labels[[label]][-train.ind,1],predictions_val[[label.count]])))
-  predictions <- c(predictions,build.predictions.xgboost(df,test,c(numeric.cols,colnames(ohe)),train.labels[[label]],label) )
+  } else {
+    print("auc perfect")
+  }
+  print(xgb.importance(feature_names = colnames(df),model = model))
+    predictions <- c(predictions,build.predictions.xgboost(df,test,c(numeric.cols,colnames(ohe)),train.labels[[label]],label) )
   label.count <- label.count + 1
   
 }
