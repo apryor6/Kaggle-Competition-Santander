@@ -55,13 +55,13 @@ products <- names(df)[grepl("ind_+.*_+ult",names(df)) & !grepl(".*_target|.count
 # drop.labels <- c("ind_aval_fin_ult1_target","ind_ahor_fin_ult1_target")
 # labels <- labels[!labels %in% drop.labels]
 # numeric.cols <- c("age","renta","antiguedad","month")
-numeric.cols <- c("age","renta","antiguedad","month",
-                  products, purchase.w)
+numeric.cols <- c("age","renta","antiguedad","month")
 # numeric.cols <- c("age","renta","antiguedad","month",
 #                   # gsub("_target","",labels)[1:7])
 # categorical.cols <- names(df)[!names(df) %in% c("ncodpers","month.id",labels,numeric.cols,products,"month.previous.id")]
 categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
-                      "conyuemp","nomprov","indfall","indext","indresi")
+                      "conyuemp","nomprov","indfall","indext","indresi",
+                      products, purchase.w)
 # categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
                       # "conyuemp","nomprov","indfall","indext","indresi")
 # df$month <- factor(month.abb[df$month],levels=month.abb)
@@ -133,10 +133,10 @@ build.predictions.xgboost <- function(df, test, features, label, label.name){
 
 
 df <- df %>% 
-  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id,ind_ctju_fin_ult1_target,ind_ctju_fin_ult1)
+  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id)
 
 test <- test %>% 
-  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id,ind_ctju_fin_ult1) %>%
+  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id) %>%
   as.data.frame()
 ohe <- dummyVars(~.,data = df[,names(df) %in% categorical.cols])
 ohe <- as(data.matrix(predict(ohe,df[,names(df) %in% categorical.cols])), "dgCMatrix")
