@@ -17,7 +17,7 @@ for (label in labels){
   colx  <- paste0(label,".x")
   coly  <- paste0(label,".y")
   diffs <- df[,.(ncodpers,month.id,change=get(colx)-get(coly))]
-  diffs$change[diffs$month.id==1] <- 0
+  # diffs$change[diffs$month.id==1] <- 0
   diffs[diffs<0] <- 0
   setkey(diffs,ncodpers)
   d <- diffs[,.(frequency = cumsum(change)),by=ncodpers]
@@ -50,7 +50,7 @@ for (label in labels){
   colx  <- paste0(label,".x")
   coly  <- paste0(label,".y")
   diffs <- df[,.(ncodpers,month.id,change=get(colx)-get(coly))]
-  diffs$change[diffs$month.id==1] <- 0
+  # diffs$change[diffs$month.id==1] <- 0
   diffs[diffs<0] <- 0
   setkey(diffs,ncodpers)
   d <- diffs[,.(frequency = cumsum(change)),by=ncodpers]
