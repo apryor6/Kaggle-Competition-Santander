@@ -146,9 +146,9 @@ Yup, same people. Let's give them minimum seniority.
 ```{r message=FALSE, warning=FALSE}
 
 # For the cleaning version I am removing these entries
-df <- df[(!is.na(df$antiguedad)) | df$month.id==max(df$month.id),]
-# df$antiguedad[is.na(df$antiguedad)] <- min(df$antiguedad,na.rm=TRUE)
-# df$antiguedad[df$antiguedad<0] <- 0
+# df <- df[(!is.na(df$antiguedad)) | df$month.id==max(df$month.id),]
+df$antiguedad[is.na(df$antiguedad)] <- min(df$antiguedad,na.rm=TRUE)
+df$antiguedad[df$antiguedad<0] <- 0
 ```
 
 Some entries don't have the date they joined the company. Just give them something in the middle of the pack
