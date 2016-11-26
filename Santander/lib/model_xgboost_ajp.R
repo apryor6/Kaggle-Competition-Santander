@@ -18,8 +18,8 @@ drop.products <- c("ind_ahor_fin_ult1","ind_aval_fin_ult1")
 df   <- df[,!names(df) %in% drop.products,with=FALSE]
 test <- test[,!names(df) %in% drop.products]
 
-df$age <- log(df$age + 1)
-test$age <- log(test$age + 1)
+df$age <- df$age 
+test$age <- test$age
 
 df <- merge(df,df %>%
               dplyr::select(ind_cco_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id")) %>%as.data.frame()
@@ -210,7 +210,7 @@ val$month.id <- save.month.id[-train.ind]
 products <- gsub("_target","",labels)
 
 full <- as.data.frame(fread("cleaned_train.csv"))
-
+full$age <- full$age
 owned.products <- names(test)[grepl("ind_+.*_+ult",names(test)) & !(grepl("_pred",names(test)))]
 if (length(owned.products)!=0){
 test <- test[,!names(test) %in% owned.products, with=FALSE]
