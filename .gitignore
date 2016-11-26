@@ -2,6 +2,7 @@
 .Rhistory
 .Rapp.history
 ./Santander/munge/feature-purchase-frequency.R
+feature-purchase-frequency.R
 
 *.csv
 
