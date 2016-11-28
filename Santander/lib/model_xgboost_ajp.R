@@ -18,11 +18,10 @@ drop.products <- c("ind_ahor_fin_ult1","ind_aval_fin_ult1")
 df   <- df[,!names(df) %in% drop.products,with=FALSE]
 test <- test[,!names(df) %in% drop.products]
 
-df$age <- df$age 
-test$age <- test$age
+
 
 df <- merge(df,df %>%
-              dplyr::select(ind_cco_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id")) %>%as.data.frame()
+              dplyr::select(ind_cco_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id"),all.x=TRUE) %>%as.data.frame()
 
 df <- df %>%
   filter(fecha_dato%in%c("2015-06-28"))
@@ -58,13 +57,13 @@ products <- names(df)[grepl("ind_+.*_+ult",names(df)) & !grepl(".*_target|.count
 # drop.labels <- c("ind_aval_fin_ult1_target","ind_ahor_fin_ult1_target")
 # labels <- labels[!labels %in% drop.labels]
 # numeric.cols <- c("age","renta","antiguedad","month")
-numeric.cols <- c("age","renta","antiguedad","month")
+numeric.cols <- c("age","renta","antiguedad","month",purchase.w)
 # numeric.cols <- c("age","renta","antiguedad","month",
 #                   # gsub("_target","",labels)[1:7])
 # categorical.cols <- names(df)[!names(df) %in% c("ncodpers","month.id",labels,numeric.cols,products,"month.previous.id")]
 categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
                       "conyuemp","nomprov","indfall","indext","indresi",
-                      products, purchase.w)
+                      products)
 # categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
                       # "conyuemp","nomprov","indfall","indext","indresi")
 # df$month <- factor(month.abb[df$month],levels=month.abb)
@@ -171,8 +170,8 @@ train.ind  <- createDataPartition(1:nrow(df),p=0.75)[[1]]
 test.save <- test
 val.save <- val
 best.map <- 0
-for (depth in c(5,10,15)){
-  for (eta in c(0.025, 0.05, 0.1)){
+for (depth in c(5)){
+  for (eta in c( 0.05)){
     test <- test.save
     val <- val.save
 predictions         <- list()
@@ -210,7 +209,6 @@ val$month.id <- save.month.id[-train.ind]
 products <- gsub("_target","",labels)
 
 full <- as.data.frame(fread("cleaned_train.csv"))
-full$age <- full$age
 owned.products <- names(test)[grepl("ind_+.*_+ult",names(test)) & !(grepl("_pred",names(test)))]
 if (length(owned.products)!=0){
 test <- test[,!names(test) %in% owned.products, with=FALSE]
