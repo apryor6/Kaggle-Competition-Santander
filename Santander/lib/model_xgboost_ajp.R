@@ -23,8 +23,10 @@ test <- test[,!names(df) %in% drop.products]
 df <- merge(df,df %>%
               dplyr::select(ind_cco_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id"),all.x=TRUE) %>%as.data.frame()
 
+# df <- df %>%
+#   filter(fecha_dato%in%c("2015-06-28"))
 df <- df %>%
-  filter(fecha_dato%in%c("2015-06-28"))
+  filter(fecha_dato%in%c("2016-05-28"))
 
 purchase.frequencies <- fread("purchase.frequencies.csv")
 purchase.frequencies.later.csv <- fread("purchase.frequencies.later.csv")
@@ -38,7 +40,7 @@ df$sexo[df$sexo=="UNKNOWN"] <- "V"
 test$sexo[test$sexo=="UNKNOWN"] <- "V"
 
 purchased <- as.data.frame(fread("purchased-products.csv"))
-ids <- purchased$ncodpers[purchased$month.id == 6 & (purchased$products!="")]
+ids <- purchased$ncodpers[purchased$month.id == 17 & (purchased$products!="")]
 
 df <- df[df$ncodpers %in% ids,]
 
