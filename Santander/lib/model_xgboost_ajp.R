@@ -57,15 +57,19 @@ products <- names(df)[grepl("ind_+.*_+ult",names(df)) & !grepl(".*_target|.count
 # drop.labels <- c("ind_aval_fin_ult1_target","ind_ahor_fin_ult1_target")
 # labels <- labels[!labels %in% drop.labels]
 # numeric.cols <- c("age","renta","antiguedad","month")
-numeric.cols <- c("age","renta","antiguedad","month",purchase.w)
+numeric.cols <- c("age","renta","antiguedad",purchase.w)
 # numeric.cols <- c("age","renta","antiguedad","month",
 #                   # gsub("_target","",labels)[1:7])
-# categorical.cols <- names(df)[!names(df) %in% c("ncodpers","month.id",labels,numeric.cols,products,"month.previous.id")]
 categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
                       "conyuemp","nomprov","indfall","indext","indresi",
                       products)
+
 # categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
-                      # "conyuemp","nomprov","indfall","indext","indresi")
+#                       "conyuemp","nomprov","indfall","indext","indresi",
+#                       "indrel_1mes","ult_fec_cli_1t","tiprel_1mes","indrel_1mes",
+#                       "canal_entrada","indrel","conyuemp",
+#                       products)
+
 # df$month <- factor(month.abb[df$month],levels=month.abb)
 # test$month <- factor(month.abb[test$month],levels=month.abb)
 print(labels)
@@ -168,12 +172,12 @@ test       <- cbind(ohe.test,data.matrix(test[,names(test) %in% numeric.cols]))
 train.ind  <- createDataPartition(1:nrow(df),p=0.75)[[1]]
 
 test.save <- test
-val.save <- val
+# val.save <- val
 best.map <- 0
 for (depth in c(5)){
   for (eta in c( 0.05)){
     test <- test.save
-    val <- val.save
+    # val <- val.save
 predictions         <- list()
 predictions_val     <- list()
 
