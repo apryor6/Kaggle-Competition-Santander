@@ -4,7 +4,6 @@
 ./Santander/munge/feature-purchase-frequency.R
 feature-purchase-frequency.R
 
-
 *.csv
 
 # Session Data files
