@@ -100,8 +100,8 @@ df <- as.data.frame(df)
 In addition to NA, there are people with very small and very high ages.
 It's also interesting that the distribution is bimodal. There are a large number of university aged students, and then another peak around middle-age. Let's separate the distribution and move the outliers to the mean of the closest one.
 ```{r message=FALSE, warning=FALSE}
-df$age[(df$age < 18)] <- median(df$age[(df$age >= 18) & (df$age <=30)],na.rm=TRUE)
-df$age[(df$age > 100)] <- median(df$age[(df$age >= 30) & (df$age <=100)],na.rm=TRUE)
+# df$age[(df$age < 18)] <- median(df$age[(df$age >= 18) & (df$age <=30)],na.rm=TRUE)
+# df$age[(df$age > 100)] <- median(df$age[(df$age >= 30) & (df$age <=100)],na.rm=TRUE)
 df$age[is.na(df$age)] <- median(df$age,na.rm=TRUE)
 df$age <- round(df$age)
 ```
