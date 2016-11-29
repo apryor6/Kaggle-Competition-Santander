@@ -30,6 +30,30 @@ df$total_products <- rowSums(df[,names(df) %in% names(df)[grepl("ind.*\\.y",name
 test$total_products <- rowSums(test[,names(test) %in% names(test)[grepl("ind.*ult1",names(test))]],na.rm=TRUE)
 
 df <- df %>%
+  dplyr::group_by(ncodpers) %>%
+  dplyr::arrange(month.id) %>%
+  dplyr::mutate(antiguedad = min(antiguedad) + month.id - 1) %>%
+  arrange(ncodpers)
+
+latest.antiguedad <- test %>%
+  dplyr::select(ncodpers,month.previous.id,antiguedad) %>%
+  merge(df %>%select(ncodpers,month.id,antiguedad) ,
+        by.x=c("ncodpers","month.previous.id"),
+        by.y=c("ncodpers","month.id"),
+        all.x=TRUE) %>%
+  dplyr::mutate(antiguedad = ifelse(is.na(antiguedad.y),
+                                    antiguedad.x,
+                                    antiguedad.y+1)) %>%
+  select(ncodpers,antiguedad) %>%
+  arrange(ncodpers)
+
+test <- test %>%
+  arrange(ncodpers)
+test$antiguedad <- latest.antiguedad$antiguedad
+rm(latest.antiguedad)
+
+
+df <- df %>%
   filter(fecha_dato%in%c("2015-06-28"))
 # df <- df %>%
   # filter(fecha_dato%in%c("2016-05-28"))
@@ -65,7 +89,7 @@ products <- names(df)[grepl("ind_+.*_+ult",names(df)) & !grepl(".*_target|.count
 # drop.labels <- c("ind_aval_fin_ult1_target","ind_ahor_fin_ult1_target")
 # labels <- labels[!labels %in% drop.labels]
 # numeric.cols <- c("age","renta","antiguedad","month")
-numeric.cols <- c("age","renta","antiguedad",purchase.w,"total_products")
+numeric.cols <- c("age","renta","antiguedad",purchase.w,"total_products","num.transactions")
 # numeric.cols <- c("age","renta","antiguedad","month",
 #                   # gsub("_target","",labels)[1:7])
 # categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
