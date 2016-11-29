@@ -17,44 +17,57 @@ test <- as.data.frame(fread("cleaned_test.csv"))
 drop.products <- c("ind_ahor_fin_ult1","ind_aval_fin_ult1")
 
 df   <- df[,!names(df) %in% drop.products,with=FALSE]
-test <- test[,!names(df) %in% drop.products]
+test <- test[,!names(test) %in% drop.products]
+products <- names(df)[grepl("ind_+.*_+ult",names(df))]
 
+products.owned <- df %>%
+  filter(month.id <= 6 | month.id >=13) %>%
+  select(ncodpers,month.id,one_of(products)) %>%
+  as.data.table()
 
+test <- as.data.table(test)
+test <- test[,!names(test) %in% products,with=FALSE] #lazy, but I'm removing product ownership because it is about to be readded month by month
+# df <- merge(df,df %>%
+              # dplyr::select(ind_cco_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id"),all.x=TRUE)
+original.month.id <- products.owned$month.id
+df <- df[fecha_dato=="2015-06-28",]
+for (month.ago in 1:5){
+  print(paste("Collecting data on product ownership",month.ago,"months ago..."))
+  products.owned[,month.id:=original.month.id+month.ago]
+  df <- merge(df,products.owned,by=c("ncodpers","month.id"),all.x=TRUE)
+  change.names <- names(df)[grepl("\\.y",names(df))]
+  new.names <- gsub("\\.y",paste("_",month.ago,"month_ago",sep=""),change.names)
+  names(df)[grepl("\\.y",names(df))] <- new.names
+  
+  #I'm being lazy here...
+  change.names <- names(df)[grepl("\\.x",names(df))]
+  new.names <- gsub("\\.x","",change.names)
+  names(df)[grepl("\\.x",names(df))] <- new.names
+  
+  
+  test <- merge(test,products.owned,by=c("ncodpers","month.id"),all.x=TRUE)
+  
+  change.names <- names(test)[grepl("\\.y",names(test))]
+  new.names <- gsub("\\.y",paste("_",month.ago,"month_ago",sep=""),change.names)
+  names(test)[grepl("\\.y",names(test))] <- new.names
+    
+  change.names <- names(test)[grepl("\\.x",names(test))]
+  new.names <- gsub("\\.x","",change.names)
+  names(test)[grepl("\\.x",names(test))] <- new.names
 
-df <- merge(df,df %>%
-              dplyr::select(ind_cco_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id"),all.x=TRUE)
-
+}
+names(test)[names(test) %in% products] <- paste(names(test)[names(test) %in% products],"_1month_ago",sep="")
+rm(list=c("products.owned","original.month.id"))
 
 df <- as.data.frame(df)
-df$total_products <- rowSums(df[,names(df) %in% names(df)[grepl("ind.*\\.y",names(df))]],na.rm=TRUE)
-test$total_products <- rowSums(test[,names(test) %in% names(test)[grepl("ind.*ult1",names(test))]],na.rm=TRUE)
+test <- as.data.frame(test)
+df[is.na(df)] <- 0
+test[is.na(test)] <- 0
+df$total_products <- rowSums(df[,names(df) %in% names(df)[grepl("1month\\_ago",names(df))]],na.rm=TRUE)
+test$total_products <- rowSums(test[,names(test) %in% names(test)[grepl("1month\\_ago",names(test))]],na.rm=TRUE)
 
-df <- df %>%
-  dplyr::group_by(ncodpers) %>%
-  dplyr::arrange(month.id) %>%
-  dplyr::mutate(antiguedad = min(antiguedad) + month.id - 1) %>%
-  arrange(ncodpers)
-
-latest.antiguedad <- test %>%
-  dplyr::select(ncodpers,month.previous.id,antiguedad) %>%
-  merge(df %>%select(ncodpers,month.id,antiguedad) ,
-        by.x=c("ncodpers","month.previous.id"),
-        by.y=c("ncodpers","month.id"),
-        all.x=TRUE) %>%
-  dplyr::mutate(antiguedad = ifelse(is.na(antiguedad.y),
-                                    antiguedad.x,
-                                    antiguedad.y+1)) %>%
-  select(ncodpers,antiguedad) %>%
-  arrange(ncodpers)
-
-test <- test %>%
-  arrange(ncodpers)
-test$antiguedad <- latest.antiguedad$antiguedad
-rm(latest.antiguedad)
-
-
-df <- df %>%
-  filter(fecha_dato%in%c("2015-06-28"))
+# df <- df %>%
+  # filter(fecha_dato%in%c("2015-06-28"))
 # df <- df %>%
   # filter(fecha_dato%in%c("2016-05-28"))
 
@@ -74,47 +87,24 @@ ids <- purchased$ncodpers[purchased$month.id == 6 & (purchased$products!="")]
 
 df <- df[df$ncodpers %in% ids,]
 
-# df <- df[sample(nrow(df),1e5),]
+# new.names <- names(test)
+# new.names[new.names %in% products] <- paste(new.names[new.names %in% products],"_target",sep="")
+# names(test) <- new.names
+
 new.names <- names(df)
-new.names[grepl("ind.*\\.y",new.names)] <- gsub("\\.y","",new.names[grepl("ind.*\\.y",new.names)])
-
-new.names[grepl("ind.*\\.x",new.names)] <- gsub("\\.x","_target",new.names[grepl("ind.*\\.x",new.names)])
-
+new.names[new.names %in% products] <- paste(new.names[new.names %in% products],"_target",sep="")
 names(df) <- new.names
 
 labels <- names(df)[grepl(".*_target",names(df))]
 purchase.w <- names(df)[grepl(".*.count",names(df))]
-products <- names(df)[grepl("ind_+.*_+ult",names(df)) & !grepl(".*_target|.count",names(df))]
-
-# drop.labels <- c("ind_aval_fin_ult1_target","ind_ahor_fin_ult1_target")
-# labels <- labels[!labels %in% drop.labels]
-# numeric.cols <- c("age","renta","antiguedad","month")
+# products <- names(df)[grepl("ind_+.*_+ult",names(df)) & !grepl(".*_target|.count|month\\_ago",names(df))]
+ownership.names <- names(df)[grepl("month\\_ago",names(df))]
 numeric.cols <- c("age","renta","antiguedad",purchase.w,"total_products","num.transactions")
-# numeric.cols <- c("age","renta","antiguedad","month",
-#                   # gsub("_target","",labels)[1:7])
-# categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
-#                       "conyuemp","nomprov","indfall","indext","indresi",
-#                       "fecha_alta",products)
+
 categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
-                      "conyuemp","nomprov","indfall","indext","indresi",products)
+                      "conyuemp","nomprov","indfall","indext","indresi",ownership.names)
 
-
-# categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
-#                       "conyuemp","nomprov","indfall","indext","indresi",
-#                       "indrel_1mes","ult_fec_cli_1t","tiprel_1mes","indrel_1mes",
-#                       "canal_entrada","indrel","conyuemp",
-#                       products)
-
-# df$month <- factor(month.abb[df$month],levels=month.abb)
-# test$month <- factor(month.abb[test$month],levels=month.abb)
 print(labels)
-
-# for (label in labels){
-#   base <- gsub("_target","",label)
-#   vals <- (rowSums(df[,c(base,label)]))
-#   print(table(vals))
-#   
-# }
 
 test$ind_empleado[test$ind_empleado=="S"] <- "N" # Some rare value that was causing errors with factors later
 char.cols <- names(test)[sapply(test,is.character)]
