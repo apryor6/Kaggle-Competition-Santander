@@ -74,8 +74,6 @@ numeric.cols <- c("age","renta","antiguedad",purchase.w,"total_products")
 categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
                       "conyuemp","nomprov","indfall","indext","indresi",products)
 
-df$fecha_alta <- year(df$fecha_alta)
-test$fecha_alta <- year(test$fecha_alta)
 
 # categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
 #                       "conyuemp","nomprov","indfall","indext","indresi",
