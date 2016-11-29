@@ -7,6 +7,7 @@ library(data.table)
 library(ggplot2)
 library(caret)
 library(pROC)
+library(lubridate)
 source('project/Santander/lib/get_recommendations.R')
 source('project/Santander/lib/MAP.R')
 
@@ -21,7 +22,12 @@ test <- test[,!names(df) %in% drop.products]
 
 
 df <- merge(df,df %>%
-              dplyr::select(ind_cco_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id"),all.x=TRUE) %>%as.data.frame()
+              dplyr::select(ind_cco_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id"),all.x=TRUE)
+
+
+df <- as.data.frame(df)
+df$total_products <- rowSums(df[,names(df) %in% names(df)[grepl("ind.*\\.y",names(df))]],na.rm=TRUE)
+test$total_products <- rowSums(test[,names(test) %in% names(test)[grepl("ind.*ult1",names(test))]],na.rm=TRUE)
 
 df <- df %>%
   filter(fecha_dato%in%c("2015-06-28"))
@@ -59,12 +65,17 @@ products <- names(df)[grepl("ind_+.*_+ult",names(df)) & !grepl(".*_target|.count
 # drop.labels <- c("ind_aval_fin_ult1_target","ind_ahor_fin_ult1_target")
 # labels <- labels[!labels %in% drop.labels]
 # numeric.cols <- c("age","renta","antiguedad","month")
-numeric.cols <- c("age","renta","antiguedad",purchase.w)
+numeric.cols <- c("age","renta","antiguedad",purchase.w,"total_products")
 # numeric.cols <- c("age","renta","antiguedad","month",
 #                   # gsub("_target","",labels)[1:7])
+# categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
+#                       "conyuemp","nomprov","indfall","indext","indresi",
+#                       "fecha_alta",products)
 categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
-                      "conyuemp","nomprov","indfall","indext","indresi",
-                      products)
+                      "conyuemp","nomprov","indfall","indext","indresi",products)
+
+df$fecha_alta <- year(df$fecha_alta)
+test$fecha_alta <- year(test$fecha_alta)
 
 # categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
 #                       "conyuemp","nomprov","indfall","indext","indresi",
