@@ -39,12 +39,9 @@ cal_data$province_code <- as.character(cal_data$province_code)
 big_cols <- c("country_residence", "join_channel", "province_name", "province_code")
 
 cleaned_factors <- cal_data %>%
-  arrange(customer_code, fetch_date) %>%
-  group_by(customer_code) %>%
-  slice(n()) %>% nrow
   select(savings:direct_debit, country_residence, join_channel, province_name, province_code) %>%
   dmap_at(big_cols, ~ ifelse(is.na(.x), "NA", .x)) %>%
-  dmap_at(big_cols, ~ ifelse(.x == "", "UNKOWN", .x))
+  dmap_at(big_cols, ~ ifelse(.x == "", "UNKNOWN", .x))
 
 smoother_binomial <- function(x, y){
   group_names <- sort(unique(x)) # Find levels of factors
@@ -52,12 +49,25 @@ smoother_binomial <- function(x, y){
   group_yes <- vapply(group_names, function(gr) sum(y[x == gr]), numeric(1))
   group_probs <- group_yes / group_counts
   
-  params <- MASS::fitdistr(group_probs, densfun = "beta", list(shape1 = 1, shape2 = 1))
-  a <- params$estimate[1]
-  b <- params$estimate[2]
+  u <- mean(group_probs)
+  v <- var(group_probs)
+  a <- ((1 - u) / v - 1 / u) * u * u
+  b <- a * (1 / u - 1)
   
   posterior <- (group_yes + a) / (a + b + group_counts)
-  names(posterior) <- group_names
-  return(posterior)
+  return(dplyr::data_frame(level = group_names, estimate = posterior))
 }
 
+estimates <- cleaned_factors %>%
+  select(country_residence:province_code) %>%
+  map(smoother_binomial, cleaned_factors$direct_debit)
+
+for(e in names(estimates)){
+  new_vars <- estimates[[e]]
+  names(new_vars)[1] <- e
+  change_name <- list("estimate")
+  names(change_name) <- paste0(e, "_estimate")
+  cleaned_factors <- cleaned_factors %>%
+    left_join(new_vars, by = names(estimates[i])) %>%
+    rename_(.dots = change_name)
+}
