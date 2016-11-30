@@ -37,7 +37,7 @@ my_theme_dark <- theme_dark() +
 #' ## First Glance	
 #' Limit the number of rows read in to avoid memory crashes with the kernel	
 #' 	
-setwd("~/kaggle/competition-santander/")	
+# setwd("~/kaggle/competition-santander/")	
 set.seed(1)	
 df   <- (fread("train_ver2.csv"))	
 test <- (fread("test_ver2.csv"))	

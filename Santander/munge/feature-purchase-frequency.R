@@ -1,7 +1,7 @@
 # This script outputs a csv file containing the number of times each product was
 # purchased in the last 5 months and the total number of transactions
 library(data.table)
-setwd('~/kaggle/competition-santander/')
+# setwd('~/kaggle/competition-santander/')
 df     <- fread("cleaned_train.csv")
 labels <- names(df)[grepl("ind_+.*_+ult",names(df))]
 cols   <- c("ncodpers","month.id","month.previous.id",labels)

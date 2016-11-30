@@ -1,4 +1,4 @@
-setwd("~/kaggle/competition-santander/")
+# setwd("~/kaggle/competition-santander/")
 library(tidyr)
 library(xgboost)
 library(plyr)

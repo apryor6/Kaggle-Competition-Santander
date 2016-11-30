@@ -1,4 +1,4 @@
-setwd("~/kaggle/competition-santander/")
+# setwd("~/kaggle/competition-santander/")
 library(tidyr)
 library(xgboost)
 library(plyr)
@@ -16,10 +16,13 @@ df   <- (fread("cleaned_train.csv"))
 test <- as.data.frame(fread("cleaned_test.csv"))
 drop.products <- c("ind_ahor_fin_ult1","ind_aval_fin_ult1")
 
+# remove some products that are extremely rare
 df   <- df[,!names(df) %in% drop.products,with=FALSE]
 test <- test[,!names(test) %in% drop.products]
 products <- names(df)[grepl("ind_+.*_+ult",names(df))]
 
+# we are training only on june 2015, so there is 5 months of history before that.
+# so I will consider only the 5 months before the testing date for creating features
 products.owned <- df %>%
   filter(month.id <= 6 | month.id >=13) %>%
   select(ncodpers,month.id,one_of(products)) %>%
@@ -27,10 +30,12 @@ products.owned <- df %>%
 
 test <- as.data.table(test)
 test <- test[,!names(test) %in% products,with=FALSE] #lazy, but I'm removing product ownership because it is about to be readded month by month
-# df <- merge(df,df %>%
-# dplyr::select(ind_cco_fin_ult1:ind_recibo_ult1, month.id, ncodpers),by.x=c("ncodpers","month.previous.id"), by.y=c("ncodpers","month.id"),all.x=TRUE)
 original.month.id <- products.owned$month.id
-df <- df[fecha_dato=="2015-06-28",]
+df <- df[fecha_dato=="2015-06-28",] # only train June 2015
+
+# create features indicating whether or not a product was owned in each of the past
+# 5 months. for each lag, match the month with the earlier one and through some name manipulation
+# extract whether the product was owned or not
 for (month.ago in 1:5){
   print(paste("Collecting data on product ownership",month.ago,"months ago..."))
   products.owned[,month.id:=original.month.id+month.ago]
@@ -63,13 +68,11 @@ df <- as.data.frame(df)
 test <- as.data.frame(test)
 df[is.na(df)] <- 0
 test[is.na(test)] <- 0
+
+# compute total number of products owned previous month
 df$total_products <- rowSums(df[,names(df) %in% names(df)[grepl("1month\\_ago",names(df))]],na.rm=TRUE)
 test$total_products <- rowSums(test[,names(test) %in% names(test)[grepl("1month\\_ago",names(test))]],na.rm=TRUE)
 
-# df <- df %>%
-# filter(fecha_dato%in%c("2015-06-28"))
-# df <- df %>%
-# filter(fecha_dato%in%c("2016-05-28"))
 
 purchase.frequencies <- fread("purchase.frequencies.csv")
 purchase.frequencies.later.csv <- fread("purchase.frequencies.later.csv")
@@ -87,9 +90,6 @@ ids <- purchased$ncodpers[purchased$month.id == 6 & (purchased$products!="")]
 
 df <- df[df$ncodpers %in% ids,]
 
-# new.names <- names(test)
-# new.names[new.names %in% products] <- paste(new.names[new.names %in% products],"_target",sep="")
-# names(test) <- new.names
 
 new.names <- names(df)
 new.names[new.names %in% products] <- paste(new.names[new.names %in% products],"_target",sep="")
@@ -101,10 +101,6 @@ purchase.w <- names(df)[grepl(".*.count",names(df))]
 ownership.names <- names(df)[grepl("month\\_ago",names(df))]
 numeric.cols <- c("age","renta","antiguedad",purchase.w,"total_products","num.transactions")
 
-categorical.cols <- c("sexo","ind_nuevo","ind_empleado","segmento",
-                      "conyuemp","nomprov","indfall","indext","indresi",ownership.names)
-
-print(labels)
 
 test$ind_empleado[test$ind_empleado=="S"] <- "N" # Some rare value that was causing errors with factors later
 char.cols <- names(test)[sapply(test,is.character)]

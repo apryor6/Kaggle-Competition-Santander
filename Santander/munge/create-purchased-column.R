@@ -1,7 +1,7 @@
 # This script outputs a csv file containing a list of new products purchased 
 # each month by each customer.
 library(data.table)
-setwd('~/kaggle/competition-santander/')
+# setwd('~/kaggle/competition-santander/')
 df     <- fread("cleaned_train.csv")
 labels <- names(df)[grepl("ind_+.*_+ult",names(df))]
 cols   <- c("ncodpers","month.id","month.previous.id",labels)
