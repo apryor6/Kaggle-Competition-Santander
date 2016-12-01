@@ -4,6 +4,28 @@ library(data.table)
 library(doMC)
 registerDoMC(cores = 4)
 set.seed(1)
+NUM.FEATURES.TO.USE <- 50 # number of top features by XGBoost to use in each model
+
+# This script can build many different models by adjusting MODEL.NUMBER. 
+# A series of model names and associated hyperparameters are accessed in a list
+# with this parameter, and the rest of the script is generic. With slight modification
+# this parameter can be taken as an input which would allow distribution of 
+# model training across many nodes in a cluster, etc. Encapsulation makes life easier
+MODEL.NUMBER <- 1 # numeric indicator of which caret L1 model to build.
+
+method.list <- list("gbm")
+params.list <- list()
+# params.list[[method.list[[1]]]] <- expand.grid(n.trees=c(100),
+                                      # interaction.depth=c(10),
+                                      # shrinkage=c(0.0025),
+                                      # n.minobsinnode=c(10))
+params.list[[method.list[[1]]]] <- expand.grid(n.trees=c(500),
+                                               interaction.depth=c(5),
+                                               shrinkage=c(5*0.0025),
+                                               n.minobsinnode=c(10))
+
+method <- method.list[[MODEL.NUMBER]]
+params <- params.list[[method]] 
 
 # read data
 df   <- as.data.frame(fread("train_prepped.csv", stringsAsFactors = TRUE))
@@ -22,7 +44,8 @@ labels <- names(df)[grepl(".*_target",names(df))] # target values
 purchase.w <- names(df)[grepl(".*.count",names(df))] # number of times a product has been bought in the past 5 months
 ownership.names <- names(df)[grepl("month\\_ago",names(df))] # various features indicating whether or not a product was owned X months ago
 
-# numeric features to use
+# numeric features that were used in the XGBoost model. This will be trimmed down
+# for each actual label based on the feature importance determined by XGBoost
 numeric.cols <- c("age",
                   "renta",
                   "antiguedad",
@@ -30,7 +53,8 @@ numeric.cols <- c("age",
                   "total_products",
                   "num.transactions")
 
-# categorical features. These will be one-hot encoded
+# categorical features that were one-hot encoded in the XGBoost model. This will be trimmed down
+# for each actual label based on the feature importance determined by XGBoost
 categorical.cols <- c("sexo",
                       "ind_nuevo",
                       "ind_empleado",
@@ -47,11 +71,6 @@ ohe.test <- dummyVars(~.,data = test[,names(test) %in% categorical.cols])
 ohe.test <- as.data.frame(predict(ohe.test,test[,names(test) %in% categorical.cols]))
 all.features <- c(numeric.cols, names(ohe))
 
-# train.labels        <- list()
-
-# for (label in labels){
-  # train.labels[[label]] <- as.data.frame(df[[label]])
-# }
 
 # remember the id's for people and months for later since all that actually goes
 # into the model is the raw feature data
@@ -67,6 +86,7 @@ df.labels[,] <- lapply(df.labels[,],as.factor)
 df         <- cbind(ohe,data.matrix(df[,names(df) %in% numeric.cols]))
 test       <- cbind(ohe.test,data.matrix(test[,names(test) %in% numeric.cols]))
 set.seed(1)
+
 # use a 75/25 train/test split so we can compute MAP@7 locally. The test set
 # is predicted using a model trained on all of the training data
 train.ind  <- createDataPartition(1:nrow(df),p=0.75)[[1]]
@@ -89,31 +109,15 @@ build.predictions.caret <- function(df, test, labels, label.name, method, featur
                      repeats = 1,
                      verboseIter=TRUE,
                      classProbs=TRUE)
-  # gbmGrid <-  expand.grid(interaction.depth = c(1),
-                          # n.trees = c(100), 
-                          # shrinkage = c(.001),
-                          # n.minobsinnode = c(10)) 
+ 
   model <- train(df[,names(df) %in% features],
                  labels[[label.name]],
                  method=method,
-                 trControl = tc,
+                 trControl=tc,
                  # preProcess=c("center","scale"),
-                 tuneGrid= data.frame(... ))
-  # model <- train(df[,names(df) %in% features],
-  #                label,
-  #                method=method,
-  #                # preProcess=c("center","scale"),
-  #                tuneGrid=data.frame(n.trees=100,
-  #                                    interaction.depth=2,
-  #                                    shrinkage=0.01,
-  #                                    n.minobsinnode=10))
-  # model <- train(df[,names(df) %in% features],
-  #                label,
-  #                method=method,
-  #                # preProcess=c("center","scale"),
-  #                tuneGrid=data.frame(...))
-  
-  predictions        <- list(predict(model,test,type="prob")[["yes"]])
+                 tuneGrid=data.frame(...))
+
+  predictions        <- list(predict(model,test[names(test) %in% features],type="prob")[["yes"]])
   names(predictions) <- paste(gsub("_target","",label.name),"_pred",sep="")
   return(predictions)
 }
@@ -121,25 +125,26 @@ build.predictions.caret <- function(df, test, labels, label.name, method, featur
 predictions         <- list()
 predictions_val     <- list()
 
-method <- "gbm"
-params <- expand.grid(n.trees=c(500),
-                     interaction.depth=c(10),
-                     shrinkage=c(0.0025),
-                     n.minobsinnode=c(10))
+
 # loop over the labels and create predictions of the validation data and training data
 # for each
 label.count <- 1
 for (label in labels){
+  importance.file <- paste("IMPORTANCE_",gsub("\\_target","",label),".RData",sep="")
+  load(importance.file)
+  features.to.use <- imp$Feature[1:min(NUM.FEATURES.TO.USE,nrow(imp))]
+  # features.to.use <- all.features[all.features %in% features.to.use]
+  # features.to.use <- all.features[1:100]
+  
   set.seed(1)
   print(paste("Label #",label.count))
-  # the syntax for indexing train.labels is messy but functional
   predictions_val <- c(predictions_val,
                        build.predictions.caret(df[train.ind,],
                                                df[-train.ind,],
                                                df.labels[train.ind,],
                                                label,
                                                method,
-                                               all.features,
+                                               features.to.use,
                                                params))
   pred.labels <- ifelse(round(predictions_val[[label.count]])==1,
                               "yes",
@@ -159,7 +164,7 @@ for (label in labels){
                                            df.labels,
                                            label,
                                            method,
-                                           all.features,
+                                           features.to.use,
                                            params) )
   label.count <- label.count + 1
 }

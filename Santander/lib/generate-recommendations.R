@@ -3,11 +3,11 @@
 # recommendations of currently unowned products
 source('project/Santander/lib/get_recommendations.R')
 source('project/Santander/lib/MAP.R')
-
-test <- fread("xgboost_preds_test.csv")
-val  <- fread("xgboost_preds_val.csv")
-# test <- fread("caret_preds_test.csv")
-# val  <- fread("caret_preds_val.csv")
+# 
+# test <- fread("xgboost_preds_test.csv")
+# val  <- fread("xgboost_preds_val.csv")
+test <- fread("caret_preds_test.csv")
+val  <- fread("caret_preds_val.csv")
 load("project/Santander/lib/products.Rdata")
 test.recs <- get.recommendations(test,products)
 val.recs  <- get.recommendations(val,products)
