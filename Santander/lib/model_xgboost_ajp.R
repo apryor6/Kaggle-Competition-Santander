@@ -107,7 +107,9 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta){
                    objective = "binary:logistic", 
                    verbose =1 ,
                    print.every.n = 10)
-  print(xgb.importance(feature_names = colnames(df),model=model))
+  imp <- xgb.importance(feature_names = colnames(df),model=model)
+  save(imp,file=paste("IMPORTANCE_",gsub("\\_target","",label.name),".RData",sep=""))
+  print(imp)
   predictions        <- list(predict(model,test))
   names(predictions) <- paste(gsub("_target","",label.name),"_pred",sep="")
   return(predictions)

@@ -84,7 +84,7 @@ build.predictions.caret <- function(df, test, labels, label.name, method, featur
   # the hyperparameters are optimized using a grid search and maximizing
   # the validation set's MAP@7, so there's no point in doing repeated CV
   # and I'll just turn it off
-  tc <- trainControl(method="cv",
+  tc <- trainControl(method="none",
                      number = 2,
                      repeats = 1,
                      verboseIter=TRUE,
