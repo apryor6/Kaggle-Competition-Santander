@@ -66,8 +66,7 @@ rm(list=c("products.owned","original.month.id"))
 
 df <- as.data.frame(df)
 test <- as.data.frame(test)
-df[is.na(df)] <- 0
-test[is.na(test)] <- 0
+
 
 # compute total number of products owned previous month
 df$total_products <- rowSums(df[,names(df) %in% names(df)[grepl("1month\\_ago",names(df))]],na.rm=TRUE)
@@ -125,3 +124,80 @@ test <- test %>%
 
 write.csv(df,"train_prepped.csv",row.names=FALSE)
 write.csv(test,"test_prepped.csv",row.names=FALSE)
+
+
+####
+
+# read data
+df   <- as.data.frame(fread("train_prepped.csv", stringsAsFactors = TRUE))
+test <- as.data.frame(fread("test_prepped.csv" , stringsAsFactors = TRUE))
+
+# make sure the factor levels agree
+factor.cols <- names(test)[sapply(test,is.factor)]
+for (col in factor.cols){
+  df[[col]] <- factor(df[[col]],levels=levels(test[[col]]))
+}
+
+
+# there's a bunch of features related to the products, and thus they have similar
+# names. Separate them out to keep things straight
+labels <- names(df)[grepl(".*_target",names(df))] # target values
+purchase.w <- names(df)[grepl(".*.count",names(df))] # number of times a product has been bought in the past 5 months
+ownership.names <- names(df)[grepl("month\\_ago",names(df))] # various features indicating whether or not a product was owned X months ago
+
+# numeric features that were used in the XGBoost model. This will be trimmed down
+# for each actual label based on the feature importance determined by XGBoost
+numeric.cols <- c("age",
+                  "renta",
+                  "antiguedad",
+                  purchase.w,
+                  "total_products",
+                  "num.transactions")
+
+# categorical features that were one-hot encoded in the XGBoost model. This will be trimmed down
+# for each actual label based on the feature importance determined by XGBoost
+categorical.cols <- c("sexo",
+                      "ind_nuevo",
+                      "ind_empleado",
+                      "segmento",
+                      "conyuemp",
+                      "nomprov",
+                      "indfall",
+                      "indext",
+                      "indresi",
+                      ownership.names)
+ohe <- dummyVars(~.,data = df[,names(df) %in% categorical.cols])
+ohe <- as.data.frame(predict(ohe,df[,names(df) %in% categorical.cols]))
+ohe.test <- dummyVars(~.,data = test[,names(test) %in% categorical.cols])
+ohe.test <- as.data.frame(predict(ohe.test,test[,names(test) %in% categorical.cols]))
+all.features <- c(numeric.cols, names(ohe))
+
+# remember the id's for people and months for later since all that actually goes
+# into the model is the raw feature data
+save.id       <- df$ncodpers
+save.month.id <- df$month.id
+save.id.test       <- test$ncodpers
+save.month.id.test <- test$month.id
+df.labels  <- df[,names(df) %in% labels]
+df.labels  <- data.frame(ifelse(df.labels==1,
+                                "yes",
+                                "no"))
+df.labels[,] <- lapply(df.labels[,],as.factor)
+df         <- cbind(ohe,data.matrix(df[,names(df) %in% numeric.cols]))
+test       <- cbind(ohe.test,data.matrix(test[,names(test) %in% numeric.cols]))
+df[is.na(df)] <- 0
+test[is.na(test)] <- 0
+save(save.id,
+     save.month.id,
+     save.id.test,
+     save.month.id.test,
+     df.labels,
+     df,
+     test,
+     numeric.cols,
+     categorical.cols,
+     labels,
+     purchase.w,
+     ownership.names,
+     file="caret_data_prepped")
+

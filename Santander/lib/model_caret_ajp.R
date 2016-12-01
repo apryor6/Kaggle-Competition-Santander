@@ -11,80 +11,87 @@ NUM.FEATURES.TO.USE <- 50 # number of top features by XGBoost to use in each mod
 # with this parameter, and the rest of the script is generic. With slight modification
 # this parameter can be taken as an input which would allow distribution of 
 # model training across many nodes in a cluster, etc. Encapsulation makes life easier
-MODEL.NUMBER <- 1 # numeric indicator of which caret L1 model to build.
+MODEL.NUMBER <- 3 # numeric indicator of which caret L1 model to build.
 
-method.list <- list("gbm")
 params.list <- list()
-# params.list[[method.list[[1]]]] <- expand.grid(n.trees=c(100),
-                                      # interaction.depth=c(10),
-                                      # shrinkage=c(0.0025),
-                                      # n.minobsinnode=c(10))
-params.list[[method.list[[1]]]] <- expand.grid(n.trees=c(500),
+params.list[["gbm"]] <- expand.grid(n.trees=c(500),
                                                interaction.depth=c(5),
                                                shrinkage=c(5*0.0025),
                                                n.minobsinnode=c(10))
+
+params.list[["glmnet"]] <- expand.grid(alpha=c(0.1),
+                                               lambda=c(1))
+
+params.list[["svmLinear"]] <- expand.grid(C=c(0.1))
+
+method.list <- as.list(names(params.list))
 
 method <- method.list[[MODEL.NUMBER]]
 params <- params.list[[method]] 
 
 # read data
-df   <- as.data.frame(fread("train_prepped.csv", stringsAsFactors = TRUE))
-test <- as.data.frame(fread("test_prepped.csv" , stringsAsFactors = TRUE))
+# This file "caret_data_prepped" contains the results of the commented out section 
+# which does a little preprocessing specific to caret but takes some time (mostly the
+# one-hot encoding bit). So I use this shortcut
+load("caret_data_prepped")
+# df   <- as.data.frame(fread("train_prepped_caret.csv", stringsAsFactors = TRUE))
+# test <- as.data.frame(fread("test_prepped_caret.csv" , stringsAsFactors = TRUE))
+# 
+# # make sure the factor levels agree
+# factor.cols <- names(test)[sapply(test,is.factor)]
+# for (col in factor.cols){
+#   df[[col]] <- factor(df[[col]],levels=levels(test[[col]]))
+# }
+# 
+# 
+# # there's a bunch of features related to the products, and thus they have similar
+# # names. Separate them out to keep things straight
+# labels <- names(df)[grepl(".*_target",names(df))] # target values
+# purchase.w <- names(df)[grepl(".*.count",names(df))] # number of times a product has been bought in the past 5 months
+# ownership.names <- names(df)[grepl("month\\_ago",names(df))] # various features indicating whether or not a product was owned X months ago
+# 
+# # numeric features that were used in the XGBoost model. This will be trimmed down
+# # for each actual label based on the feature importance determined by XGBoost
+# numeric.cols <- c("age",
+#                   "renta",
+#                   "antiguedad",
+#                   purchase.w,
+#                   "total_products",
+#                   "num.transactions")
+# 
+# # categorical features that were one-hot encoded in the XGBoost model. This will be trimmed down
+# # for each actual label based on the feature importance determined by XGBoost
+# categorical.cols <- c("sexo",
+#                       "ind_nuevo",
+#                       "ind_empleado",
+#                       "segmento",
+#                       "conyuemp",
+#                       "nomprov",
+#                       "indfall",
+#                       "indext",
+#                       "indresi",
+#                       ownership.names)
+# ohe <- dummyVars(~.,data = df[,names(df) %in% categorical.cols])
+# ohe <- as.data.frame(predict(ohe,df[,names(df) %in% categorical.cols]))
+# ohe.test <- dummyVars(~.,data = test[,names(test) %in% categorical.cols])
+# ohe.test <- as.data.frame(predict(ohe.test,test[,names(test) %in% categorical.cols]))
+# all.features <- c(numeric.cols, names(ohe))
+# 
+# # remember the id's for people and months for later since all that actually goes
+# # into the model is the raw feature data
+# save.id       <- df$ncodpers
+# save.month.id <- df$month.id
+# save.id.test       <- test$ncodpers
+# save.month.id.test <- test$month.id
+# df.labels  <- df[,names(df) %in% labels]
+# df.labels  <- data.frame(ifelse(df.labels==1,
+#                      "yes",
+#                      "no"))
+# df.labels[,] <- lapply(df.labels[,],as.factor)
+# df         <- cbind(ohe,data.matrix(df[,names(df) %in% numeric.cols]))
+# test       <- cbind(ohe.test,data.matrix(test[,names(test) %in% numeric.cols]))
 
-# make sure the factor levels agree
-factor.cols <- names(test)[sapply(test,is.factor)]
-for (col in factor.cols){
-  df[[col]] <- factor(df[[col]],levels=levels(test[[col]]))
-}
 
-
-# there's a bunch of features related to the products, and thus they have similar
-# names. Separate them out to keep things straight
-labels <- names(df)[grepl(".*_target",names(df))] # target values
-purchase.w <- names(df)[grepl(".*.count",names(df))] # number of times a product has been bought in the past 5 months
-ownership.names <- names(df)[grepl("month\\_ago",names(df))] # various features indicating whether or not a product was owned X months ago
-
-# numeric features that were used in the XGBoost model. This will be trimmed down
-# for each actual label based on the feature importance determined by XGBoost
-numeric.cols <- c("age",
-                  "renta",
-                  "antiguedad",
-                  purchase.w,
-                  "total_products",
-                  "num.transactions")
-
-# categorical features that were one-hot encoded in the XGBoost model. This will be trimmed down
-# for each actual label based on the feature importance determined by XGBoost
-categorical.cols <- c("sexo",
-                      "ind_nuevo",
-                      "ind_empleado",
-                      "segmento",
-                      "conyuemp",
-                      "nomprov",
-                      "indfall",
-                      "indext",
-                      "indresi",
-                      ownership.names)
-ohe <- dummyVars(~.,data = df[,names(df) %in% categorical.cols])
-ohe <- as.data.frame(predict(ohe,df[,names(df) %in% categorical.cols]))
-ohe.test <- dummyVars(~.,data = test[,names(test) %in% categorical.cols])
-ohe.test <- as.data.frame(predict(ohe.test,test[,names(test) %in% categorical.cols]))
-all.features <- c(numeric.cols, names(ohe))
-
-
-# remember the id's for people and months for later since all that actually goes
-# into the model is the raw feature data
-save.id       <- df$ncodpers
-save.month.id <- df$month.id
-save.id.test       <- test$ncodpers
-save.month.id.test <- test$month.id
-df.labels  <- df[,names(df) %in% labels]
-df.labels  <- data.frame(ifelse(df.labels==1,
-                     "yes",
-                     "no"))
-df.labels[,] <- lapply(df.labels[,],as.factor)
-df         <- cbind(ohe,data.matrix(df[,names(df) %in% numeric.cols]))
-test       <- cbind(ohe.test,data.matrix(test[,names(test) %in% numeric.cols]))
 set.seed(1)
 
 # use a 75/25 train/test split so we can compute MAP@7 locally. The test set
@@ -152,7 +159,7 @@ for (label in labels){
   accuracy <- mean(df.labels[[label]][-train.ind]==pred.labels)
   print(sprintf("Accuracy for label %s = %f",label,accuracy)) # accuracy not super useful for this task
   if (accuracy < 1){ # perfect accuracy causes some error with pROC
-    print(auc(roc(df.labels[[label]][-train.ind],predictions_val[[label.count]])))
+    print(pROC::auc(roc(df.labels[[label]][-train.ind],predictions_val[[label.count]])))
   } else {
     print("auc perfect")
   }
