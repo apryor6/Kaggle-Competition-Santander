@@ -122,9 +122,9 @@ predictions         <- list()
 predictions_val     <- list()
 
 method <- "gbm"
-params <- expand.grid(n.trees=c(100),
-                     interaction.depth=c(5),
-                     shrinkage=c(0.01),
+params <- expand.grid(n.trees=c(500),
+                     interaction.depth=c(10),
+                     shrinkage=c(0.0025),
                      n.minobsinnode=c(10))
 # loop over the labels and create predictions of the validation data and training data
 # for each
