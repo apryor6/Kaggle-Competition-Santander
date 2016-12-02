@@ -4,23 +4,23 @@ library(data.table)
 library(doMC)
 registerDoMC(cores = 4)
 set.seed(1)
-NUM.FEATURES.TO.USE <- 50 # number of top features by XGBoost to use in each model
+NUM.FEATURES.TO.USE <- 200 # number of top features by XGBoost to use in each model
 
 # This script can build many different models by adjusting MODEL.NUMBER. 
 # A series of model names and associated hyperparameters are accessed in a list
 # with this parameter, and the rest of the script is generic. With slight modification
 # this parameter can be taken as an input which would allow distribution of 
 # model training across many nodes in a cluster, etc. Encapsulation makes life easier
-MODEL.NUMBER <- 3 # numeric indicator of which caret L1 model to build.
+MODEL.NUMBER <- 1 # numeric indicator of which caret L1 model to build.
 
 params.list <- list()
-params.list[["gbm"]] <- expand.grid(n.trees=c(500),
+params.list[["gbm"]] <- expand.grid(n.trees=c(100),
                                                interaction.depth=c(5),
                                                shrinkage=c(5*0.0025),
                                                n.minobsinnode=c(10))
 
-params.list[["glmnet"]] <- expand.grid(alpha=c(0.1),
-                                               lambda=c(1))
+params.list[["glmnet"]] <- expand.grid(alpha=c(5),
+                                               lambda=c(0.001)) #cur best alpha 0.5 lambda 0.001
 
 params.list[["svmLinear"]] <- expand.grid(C=c(0.1))
 
@@ -75,7 +75,7 @@ load("caret_data_prepped")
 # ohe <- as.data.frame(predict(ohe,df[,names(df) %in% categorical.cols]))
 # ohe.test <- dummyVars(~.,data = test[,names(test) %in% categorical.cols])
 # ohe.test <- as.data.frame(predict(ohe.test,test[,names(test) %in% categorical.cols]))
-# all.features <- c(numeric.cols, names(ohe))
+all.features <- names(df)
 # 
 # # remember the id's for people and months for later since all that actually goes
 # # into the model is the raw feature data
@@ -139,8 +139,8 @@ label.count <- 1
 for (label in labels){
   importance.file <- paste("IMPORTANCE_",gsub("\\_target","",label),".RData",sep="")
   load(importance.file)
-  features.to.use <- imp$Feature[1:min(NUM.FEATURES.TO.USE,nrow(imp))]
-  # features.to.use <- all.features[all.features %in% features.to.use]
+  features.to.use <- imp$Feature[3:min(NUM.FEATURES.TO.USE,nrow(imp))]
+  features.to.use <- all.features[sample(length(all.features),50)]
   # features.to.use <- all.features[1:100]
   
   set.seed(1)
@@ -206,6 +206,6 @@ val <- val %>%
 names(val)[grepl("1month",names(val))] <- gsub("\\_1month\\_ago","",names(val)[grepl("1month",names(val))])
 
 # save the results
-write.csv(test,"caret_preds_test.csv")
-write.csv(val,"caret_preds_val.csv")
+write.csv(test,paste("caret_",method,"_preds_test.csv",sep=""),row.names = FALSE)
+write.csv(val,paste("caret_",method,"_preds_val.csv",sep=""),row.names = FALSE)
 

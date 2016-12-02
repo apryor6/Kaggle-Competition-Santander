@@ -124,7 +124,7 @@ for (label in labels){
   accuracy <- mean(train.labels[[label]][-train.ind,1]==round(predictions_val[[label.count]]))
   print(sprintf("Accuracy for label %s = %f",label,accuracy)) # accuracy not super useful for this task
   if (accuracy < 1){ # perfect accuracy causes some error with pROC
-  print(auc(roc(train.labels[[label]][-train.ind,1],predictions_val[[label.count]])))
+  print(auc::auc(roc(train.labels[[label]][-train.ind,1],predictions_val[[label.count]])))
   } else {
     print("auc perfect")
   }
@@ -168,8 +168,8 @@ val <- val %>%
 names(val)[grepl("1month",names(val))] <- gsub("\\_1month\\_ago","",names(val)[grepl("1month",names(val))])
 
 # save the results
-write.csv(test,"xgboost_preds_test.csv")
-write.csv(val,"xgboost_preds_val.csv")
+write.csv(test,"xgboost_preds_test.csv",row.names = FALSE)
+write.csv(val,"xgboost_preds_val.csv",row.names = FALSE)
 
 
 # test.recs <- get.recommendations(as.data.table(test),products)
