@@ -2,8 +2,8 @@ source("project/Santander/lib/dataframe-correlation.R")
 
 weights <- list()
 weights[['xgboost']] <- 1
-weights[['glmnet']] <- .5
-weights[['gbm']] <- .5
+weights[['glmnet']] <- 0
+weights[['gbm']] <- 0
 
 test.glmnet <- fread("caret_glmnet_preds_test.csv")
 val.glmnet  <- as.data.frame(fread("caret_glmnet_preds_val.csv"))
@@ -13,8 +13,8 @@ test.gbm  <- as.data.frame(fread("caret_gbm_preds_test.csv"))
 
 test.xgboost <- as.data.frame(fread("xgboost_preds_test.csv"))
 val.xgboost  <- as.data.frame(fread("xgboost_preds_val.csv"))
-val.xgboost <- val.xgboost[,2:47]
-test.xgboost <- test.xgboost[,2:47]
+# val.xgboost <- val.xgboost[,2:47]
+# test.xgboost <- test.xgboost[,2:47]
 
 pred.names <- names(val.glmnet)[grepl("\\_pred",names(val.glmnet))]
 

@@ -79,13 +79,13 @@ train.ind  <- createDataPartition(1:nrow(df),p=0.75)[[1]]
 # a grid search and these parameters were okay so I commented it out for now. You just 
 # simply scan parameters and save the ones that gave you the best local MAP@7 on the validation data
 
-# test.save <- test
+test.save <- test
 best.map <- 0
-# for (depth in c(5)){
-  # for (eta in c( 0.05)){
-depth <- 5
+# for (depth in c(3,5,7,9,11,15)){
+  # for (eta in c(0.01,0.025, 0.05,0.1,0.25,0.5)){
+depth <- 7
 eta <- 0.05
-# test <- test.save
+test <- test.save
 predictions         <- list()
 predictions_val     <- list()
 
@@ -100,16 +100,24 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta){
   # eta:        XGBoost learning rate
   
   dtrain <- xgb.DMatrix(data = df, label=label)
+  # model <- xgb.cv(data = dtrain,
+                   # max.depth = depth, 
+                   # eta = eta, nthread = 4,
+                   # nround = 100, 
+                   # objective = "binary:logistic", 
+                   # verbose =1 ,
+                   # print.every.n = 10,
+                  # nfold=5)
   model <- xgboost(data = dtrain,
-                   max.depth = depth, 
+                   max.depth = depth,
                    eta = eta, nthread = 4,
-                   nround = 100, 
-                   objective = "binary:logistic", 
-                   verbose =1 ,
+                   nround = 70,
+                   objective = "binary:logistic",
+                   verbose =0 ,
                    print.every.n = 10)
   imp <- xgb.importance(feature_names = colnames(df),model=model)
   save(imp,file=paste("IMPORTANCE_",gsub("\\_target","",label.name),".RData",sep=""))
-  print(imp)
+  # print(imp)
   predictions        <- list(predict(model,test))
   names(predictions) <- paste(gsub("_target","",label.name),"_pred",sep="")
   return(predictions)
@@ -122,11 +130,11 @@ for (label in labels){
   # the syntax for indexing train.labels is messy but functional
   predictions_val <- c(predictions_val,build.predictions.xgboost(df[train.ind,],df[-train.ind,],train.labels[[label]][train.ind,1,drop=F],label,depth,eta) )
   accuracy <- mean(train.labels[[label]][-train.ind,1]==round(predictions_val[[label.count]]))
-  print(sprintf("Accuracy for label %s = %f",label,accuracy)) # accuracy not super useful for this task
+  # print(sprintf("Accuracy for label %s = %f",label,accuracy)) # accuracy not super useful for this task
   if (accuracy < 1){ # perfect accuracy causes some error with pROC
-  print(auc::auc(roc(train.labels[[label]][-train.ind,1],predictions_val[[label.count]])))
+  # print(pROC::auc(roc(train.labels[[label]][-train.ind,1],predictions_val[[label.count]])))
   } else {
-    print("auc perfect")
+    # print("auc perfect")
   }
   
   # now predict on the testing data
@@ -168,26 +176,31 @@ val <- val %>%
 names(val)[grepl("1month",names(val))] <- gsub("\\_1month\\_ago","",names(val)[grepl("1month",names(val))])
 
 # save the results
-write.csv(test,"xgboost_preds_test.csv",row.names = FALSE)
-write.csv(val,"xgboost_preds_val.csv",row.names = FALSE)
 
 
 # test.recs <- get.recommendations(as.data.table(test),products)
-# val.recs  <- get.recommendations(as.data.table(val),products)
-# val$added_products <- val.recs$added_products
+val.recs  <- get.recommendations(as.data.table(val),products)
+val$added_products <- val.recs$added_products
 
-# purchased <- as.data.frame(fread("purchased-products.csv"))
-# val <- val %>%
-  # merge(purchased,by=c("ncodpers","month.id"))
-# MAP <- mapk(k=7,strsplit(val$products, " "),strsplit(val$added_products," "))
-# print(paste("Validation MAP@7 = ",MAP))
+purchased <- as.data.frame(fread("purchased-products.csv"))
+val <- val %>%
+  merge(purchased,by=c("ncodpers","month.id"))
+MAP <- mapk(k=7,strsplit(val$products, " "),strsplit(val$added_products," "))
+print(paste("Validation MAP@7 = ",MAP))
 
 # if (MAP > best.map){
   # best.map <- MAP
   # out.recs <- test.recs
   # best.depth <- depth
   # best.eta <- eta
+  
 # }
+  # }
 # }
+
+  write.csv(test,"xgboost_preds_test.csv",row.names = FALSE)
+  write.csv(val,"xgboost_preds_val.csv",row.names = FALSE)
+  save.image(file="saved.workspace.RData")
+  
 # }
 # write.csv(out.recs,"recommendations_xgboost.csv",row.names = FALSE)

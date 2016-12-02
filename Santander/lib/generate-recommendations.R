@@ -4,8 +4,8 @@
 source('project/Santander/lib/get_recommendations.R')
 source('project/Santander/lib/MAP.R')
 # 
-# test <- fread("xgboost_preds_test.csv")
-# val  <- fread("xgboost_preds_val.csv")
+test <- fread("xgboost_preds_test.csv")
+val  <- fread("xgboost_preds_val.csv")
 # test <- fread("caret_preds_test.csv")
 # val  <- fread("caret_preds_val.csv")
 # test <- fread("caret_gbm_preds_test.csv")
@@ -13,8 +13,8 @@ source('project/Santander/lib/MAP.R')
 # test <- fread("caret_glmnet_preds_test.csv")
 # val  <- fread("caret_glmnet_preds_val.csv")
 
-test <- fread("combined_preds_test.csv")
-val  <- fread("combined_preds_val.csv")
+# test <- fread("combined_preds_test.csv")
+# val  <- fread("combined_preds_val.csv")
 
 load("project/Santander/lib/products.Rdata")
 val.recs  <- get.recommendations(val,products)
