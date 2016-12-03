@@ -28,10 +28,68 @@ products.owned <- df %>%
   select(ncodpers,month.id,one_of(products)) %>%
   as.data.table()
 
+
+test <- as.data.table(test)
+original.month.id <- products.owned$month.id
+df <- df[fecha_dato=="2015-06-28",]
+
+
+#### start of region to check out
+# products.owned[,month.previous.id:=month.id-1]
+# dropped.products <- merge(products.owned,products.owned,by.x=c("ncodpers","month.previous.id"),by.y=c("ncodpers","month.id"),all.x=TRUE)
+# dropped.products[is.na(dropped.products)] <- 0
+# added.products <- dropped.products
+# for (product in products){
+#   print(paste("Getting drop history for",product))
+#   colx <- paste(product,".x",sep="")
+#   coly <- paste(product,".y",sep="")
+#   diff <- dropped.products[,(get(colx)-get(coly))]
+#   dropped.products[,dropped:=ifelse(diff<0,1,0)]
+#
+#   diff.added <- added.products[,(get(colx)-get(coly))]
+#   dropped.products[,added:=ifelse(diff.added>0,1,0)]
+#
+#   print(paste("Num dropped",sum(dropped.products$dropped)))
+#   print(paste("Num added",sum(added.products$added)))
+#
+#   for(month.ago in 1:5){
+#     colname <- paste(product,"_dropped_",month.ago,"months_ago",sep="")
+#     tmp <- merge(df[,.(ncodpers,month.id=month.id-month.ago)],dropped.products[,.(ncodpers,month.id,dropped)],by=c("ncodpers","month.id"),all.x=TRUE,sort=FALSE)
+#     # tmp <- merge(df[,.(ncodpers,month.id=month.id-1)],tmp[,.(ncodpers,month.id,dropped)],by=c("ncodpers","month.id"),sort=FALSE)
+#     df[[colname]] <- tmp$dropped
+#
+#     tmp <- merge(test[,.(ncodpers,month.id=month.id-month.ago)],dropped.products[,.(ncodpers,month.id,dropped)],by=c("ncodpers","month.id"),all.x=TRUE,sort=FALSE)
+#     # tmp <- merge(test[,.(ncodpers,month.id=month.id-1)],tmp[,.(ncodpers,month.id,dropped)],by=c("ncodpers","month.id"),sort=FALSE)
+#     test[[colname]] <- tmp$dropped
+#
+#
+#     colname <- paste(product,"_added_",month.ago,"months_ago",sep="")
+#     tmp <- merge(df[,.(ncodpers,month.id=month.id-month.ago)],added.products[,.(ncodpers,month.id,added)],by=c("ncodpers","month.id"),all.x=TRUE,sort=FALSE)
+#     # tmp <- merge(df[,.(ncodpers,month.id=month.id-1)],tmp[,.(ncodpers,month.id,dropped)],by=c("ncodpers","month.id"),sort=FALSE)
+#     df[[colname]] <- tmp$added
+#
+#     tmp <- merge(test[,.(ncodpers,month.id=month.id-month.ago)],added.products[,.(ncodpers,month.id,added)],by=c("ncodpers","month.id"),all.x=TRUE,sort=FALSE)
+#     # tmp <- merge(test[,.(ncodpers,month.id=month.id-1)],tmp[,.(ncodpers,month.id,dropped)],by=c("ncodpers","month.id"),sort=FALSE)
+#     test[[colname]] <- tmp$added
+#
+#   }
+# }
+# df[is.na(df)] <- 0
+# test[is.na(test)] <- 0
+
+
+#########################end i think
+
 test <- as.data.table(test)
 test <- test[,!names(test) %in% products,with=FALSE] #lazy, but I'm removing product ownership because it is about to be readded month by month
 original.month.id <- products.owned$month.id
 df <- df[fecha_dato=="2015-06-28",] # only train June 2015
+
+
+
+
+
+
 
 # create features indicating whether or not a product was owned in each of the past
 # 5 months. for each lag, match the month with the earlier one and through some name manipulation
@@ -62,7 +120,7 @@ for (month.ago in 1:5){
   
 }
 names(test)[names(test) %in% products] <- paste(names(test)[names(test) %in% products],"_1month_ago",sep="")
-rm(list=c("products.owned","original.month.id"))
+# rm(list=c("products.owned","original.month.id"))
 
 df <- as.data.frame(df)
 test <- as.data.frame(test)
@@ -72,6 +130,65 @@ test[is.na(test)] <- 0
 # compute total number of products owned previous month
 df$total_products <- rowSums(df[,names(df) %in% names(df)[grepl("1month\\_ago",names(df))]],na.rm=TRUE)
 test$total_products <- rowSums(test[,names(test) %in% names(test)[grepl("1month\\_ago",names(test))]],na.rm=TRUE)
+
+
+#### try inserting here instead
+products.owned$month.id <- original.month.id
+# 
+df <- as.data.table(df)
+test <- as.data.table(test)
+products.owned[,month.previous.id:=month.id-1]
+dropped.products <- merge(products.owned,products.owned,by.x=c("ncodpers","month.previous.id"),by.y=c("ncodpers","month.id"),all.x=TRUE)
+dropped.products[is.na(dropped.products)] <- 0
+added.products <- dropped.products
+for (product in products){
+  print(paste("Getting drop history for",product))
+  colx <- paste(product,".x",sep="")
+  coly <- paste(product,".y",sep="")
+  diff <- dropped.products[,(get(colx)-get(coly))]
+  dropped.products[,dropped:=ifelse(diff<0,1,0)]
+
+  diff.added <- added.products[,(get(colx)-get(coly))]
+  added.products[,added:=ifelse(diff.added>0,1,0)]
+
+  print(paste("Num dropped",sum(dropped.products$dropped)))
+  print(paste("Num added",sum(added.products$added)))
+
+  for(month.ago in 1:5){
+    colname <- paste(product,"_dropped_",month.ago,"months_ago",sep="")
+    tmp <- merge(df[,.(ncodpers,month.id=month.id-month.ago)],dropped.products[,.(ncodpers,month.id,dropped)],by=c("ncodpers","month.id"),all.x=TRUE,sort=FALSE)
+    # tmp <- merge(df[,.(ncodpers,month.id=month.id-1)],tmp[,.(ncodpers,month.id,dropped)],by=c("ncodpers","month.id"),sort=FALSE)
+    df[[colname]] <- tmp$dropped
+
+    tmp <- merge(test[,.(ncodpers,month.id=month.id-month.ago)],dropped.products[,.(ncodpers,month.id,dropped)],by=c("ncodpers","month.id"),all.x=TRUE,sort=FALSE)
+    # tmp <- merge(test[,.(ncodpers,month.id=month.id-1)],tmp[,.(ncodpers,month.id,dropped)],by=c("ncodpers","month.id"),sort=FALSE)
+    test[[colname]] <- tmp$dropped
+
+
+    colname <- paste(product,"_added_",month.ago,"months_ago",sep="")
+    tmp <- merge(df[,.(ncodpers,month.id=month.id-month.ago)],added.products[,.(ncodpers,month.id,added)],by=c("ncodpers","month.id"),all.x=TRUE,sort=FALSE)
+    # tmp <- merge(df[,.(ncodpers,month.id=month.id-1)],tmp[,.(ncodpers,month.id,dropped)],by=c("ncodpers","month.id"),sort=FALSE)
+    df[[colname]] <- tmp$added
+
+    tmp <- merge(test[,.(ncodpers,month.id=month.id-month.ago)],added.products[,.(ncodpers,month.id,added)],by=c("ncodpers","month.id"),all.x=TRUE,sort=FALSE)
+    # tmp <- merge(test[,.(ncodpers,month.id=month.id-1)],tmp[,.(ncodpers,month.id,dropped)],by=c("ncodpers","month.id"),sort=FALSE)
+    test[[colname]] <- tmp$added
+
+  }
+}
+df[is.na(df)] <- 0
+test[is.na(test)] <- 0
+df <- as.data.frame(df)
+test <- as.data.frame(test)
+# 
+
+
+
+####
+
+
+
+
 
 
 purchase.frequencies <- fread("purchase.frequencies.csv")
