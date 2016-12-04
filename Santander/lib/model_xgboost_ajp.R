@@ -53,17 +53,17 @@ categorical.cols <- c("sexo",
                       drop.names,
                       add.names)
 
-# categorical.cols <- c("sexo",
-#                       "ind_nuevo",
-#                       "ind_empleado",
-#                       "segmento",
-#                       "conyuemp",
-#                       "nomprov",
-#                       "indfall",
-#                       "indext",
-#                       "indresi",
-#                       ownership.names)
-
+categorical.cols <- c("sexo",
+                      "ind_nuevo",
+                      "ind_empleado",
+                      "segmento",
+                      "conyuemp",
+                      "nomprov",
+                      "indfall",
+                      "indext",
+                      "indresi",
+                      ownership.names)
+# 
 
 # one-hot encode the categorical features
 ohe <- dummyVars(~.,data = df[,names(df) %in% categorical.cols])
