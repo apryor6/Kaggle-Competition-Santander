@@ -17,6 +17,9 @@ set.seed(1)
 df   <- as.data.frame(fread("train_prepped.csv", stringsAsFactors = TRUE))
 test <- as.data.frame(fread("test_prepped.csv" , stringsAsFactors = TRUE))
 
+purchase.history <- fread("purchase-history.csv")
+df   <- merge(df,purchase.history,by=c("ncodpers","month.id"),sort=FALSE)
+test <- merge(test,purchase.history,by=c("ncodpers","month.id"),sort=FALSE)
 # make sure the factor levels agree
 factor.cols <- names(test)[sapply(test,is.factor)]
 for (col in factor.cols){
@@ -25,19 +28,21 @@ for (col in factor.cols){
 
 # there's a bunch of features related to the products, and thus they have similar
 # names. Separate them out to keep things straight
-labels <- names(df)[grepl(".*_target",names(df))] # target values
-purchase.w <- names(df)[grepl(".*.count",names(df))] # number of times a product has been bought in the past 5 months
+labels          <- names(df)[grepl(".*_target",names(df))] # target values
+purchase.w      <- names(df)[grepl(".*.count",names(df))] # number of times a product has been bought in the past 5 months
 ownership.names <- names(df)[grepl("month\\_ago",names(df)) & !grepl("month\\.previous",names(df))] # various features indicating whether or not a product was owned X months ago
-drop.names <- names(df)[grepl("dropped",names(df))] # various features indicating whether or not a product was owned X months ago
-add.names <- names(df)[grepl("added",names(df))] # various features indicating whether or not a product was owned X months ago
-
+drop.names      <- names(df)[grepl("dropped",names(df))] # various features indicating whether or not a product was owned X months ago
+add.names       <- names(df)[grepl("added",names(df))] # various features indicating whether or not a product was owned X months ago
+num.added.names <- names(df)[grepl("num\\.added",names(df))]  # total number of products added X months ago
 # numeric features to use
 numeric.cols <- c("age",
                   "renta",
                   "antiguedad",
                   purchase.w,
                   "total_products",
-                  "num.transactions")
+                  "num.transactions",
+                  num.added.names)
+#
 
 # categorical features. These will be one-hot encoded
 categorical.cols <- c("sexo",
@@ -51,6 +56,8 @@ categorical.cols <- c("sexo",
                       "tiprel_1mes",
                       "ind_actividad_cliente",
                       ownership.names,
+                      # added.products,
+                      # dropped.products,
                       "canal_entrada")
             #canal entrada?
 

@@ -11,7 +11,7 @@ df     <- df[,names(df) %in% cols,with=FALSE]
 df     <- merge(df,df,by.x=c("ncodpers","month.previous.id"),by.y=c("ncodpers","month.id"),all.x=TRUE)
 
 # entries that don't have a corresponding row for the previous month will be NA and
-# I will treat these as if that product was not owned
+# I will treat these as if that product was owned 
 df[is.na(df)] <- 0
 
 # for each product, the difference between the current month on the left and the
