@@ -50,7 +50,8 @@ categorical.cols <- c("sexo",
                       "indrel",
                       "tiprel_1mes",
                       "ind_actividad_cliente",
-                      ownership.names)
+                      ownership.names,
+                      "canal_entrada")
             #canal entrada?
 
 # categorical.cols <- c("sexo",
