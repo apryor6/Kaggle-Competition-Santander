@@ -44,25 +44,25 @@ categorical.cols <- c("sexo",
                       "ind_nuevo",
                       "ind_empleado",
                       "segmento",
-                      "conyuemp",
                       "nomprov",
-                      "indfall",
                       "indext",
                       "indresi",
-                      ownership.names,
-                      drop.names,
-                      add.names)
-
-categorical.cols <- c("sexo",
-                      "ind_nuevo",
-                      "ind_empleado",
-                      "segmento",
-                      "conyuemp",
-                      "nomprov",
-                      "indfall",
-                      "indext",
-                      "indresi",
+                      "indrel",
+                      "tiprel_1mes",
+                      "ind_actividad_cliente",
                       ownership.names)
+            #canal entrada?
+
+# categorical.cols <- c("sexo",
+#                       "ind_nuevo",
+#                       "ind_empleado",
+#                       "segmento",
+#                       "conyuemp",
+#                       "nomprov",
+#                       "indfall",
+#                       "indext",
+#                       "indresi",
+#                       ownership.names)
 # 
 
 # one-hot encode the categorical features
@@ -99,7 +99,7 @@ train.ind  <- createDataPartition(1:nrow(df),p=0.75)[[1]]
 best.map <- 0
 # for (depth in c(5)){
   # for (eta in c( 0.05)){
-depth <- 5
+depth <- 7
 eta <- 0.05
 # test <- test.save
 predictions         <- list()
@@ -119,7 +119,8 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta){
   model <- xgboost(data = dtrain,
                    max.depth = depth, 
                    eta = eta, nthread = 4,
-                   nround = 100, 
+                   nround = 70, 
+                   subsample=0.75,
                    objective = "binary:logistic", 
                    verbose =1 ,
                    print.every.n = 10)

@@ -14,11 +14,38 @@ source('project/Santander/lib/MAP.R')
 set.seed(1)
 df   <- (fread("cleaned_train.csv"))
 test <- as.data.frame(fread("cleaned_test.csv"))
-drop.products <- c("ind_ahor_fin_ult1","ind_aval_fin_ult1")
+
+df <- df %>% 
+  arrange(ncodpers)
+
+new.antiguedad <- df %>% 
+  dplyr::select(ncodpers,month.id,antiguedad) %>%
+  dplyr::group_by(ncodpers) %>%
+  dplyr::mutate(antiguedad=min(antiguedad,na.rm=T) + month.id - 1) %>%
+  ungroup() %>%
+  dplyr::arrange(ncodpers) %>%
+  dplyr::select(antiguedad)
+df$antiguedad <- new.antiguedad$antiguedad
+
+test <- test %>%
+  arrange(ncodpers)
+
+new.antiguedad <- df %>% 
+  dplyr::group_by(ncodpers) %>%
+  dplyr::summarize(antiguedad=max(antiguedad,na.rm=T)) %>%
+  dplyr::mutate(antiguedad = antiguedad + 1) %>%
+  dplyr::select(antiguedad,ncodpers) %>% 
+  merge(test %>% select(ncodpers,antiguedad),by="ncodpers",sort=FALSE) %>%
+  dplyr::arrange(ncodpers) %>%
+  dplyr::select(antiguedad=antiguedad.x)
+
+test$antiguedad <- new.antiguedad$antiguedad
+
+# drop.products <- c("ind_ahor_fin_ult1","ind_aval_fin_ult1")
 
 # remove some products that are extremely rare
-df   <- df[,!names(df) %in% drop.products,with=FALSE]
-test <- test[,!names(test) %in% drop.products]
+# df   <- df[,!names(df) %in% drop.products,with=FALSE]
+# test <- test[,!names(test) %in% drop.products]
 products <- names(df)[grepl("ind_+.*_+ult",names(df))]
 
 # we are training only on june 2015, so there is 5 months of history before that.
@@ -138,7 +165,7 @@ products.owned$month.id <- original.month.id
 df <- as.data.table(df)
 test <- as.data.table(test)
 products.owned[,month.previous.id:=month.id-1]
-dropped.products <- merge(products.owned,products.owned,by.x=c("ncodpers","month.previous.id"),by.y=c("ncodpers","month.id"),all.x=TRUE)
+dropped.products <- merge(products.owned,products.owned,by.x=c("ncodpers","month.previous.id"),by.y=c("ncodpers","month.id"),all.x=TRUE,sort=FALSE)
 dropped.products[is.na(dropped.products)] <- 0
 added.products <- dropped.products
 for (product in products){
@@ -239,6 +266,16 @@ df <- df %>%
 test <- test %>% 
   dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id) %>%
   as.data.frame()
+
+
+# recent.birthday  <- (fread("cleaned_train.csv")) %>%
+  # select(ncodpers,month.id,age,antiguedad)
+# recent.birthday  <- (fread("test_ver2.csv")) %>%
+  # select(ncodpers,month.id,age,antiguedad)
+# tmp <-  merge(recent.birthday, 
+                          # recent.birthday[,.(ncodpers,month.id=month.id+1,age,antiguedad)],
+                          # by=c("ncodpers","month.id"))
+
 
 write.csv(df,"train_prepped.csv",row.names=FALSE)
 write.csv(test,"test_prepped.csv",row.names=FALSE)
