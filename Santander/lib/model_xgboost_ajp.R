@@ -56,8 +56,8 @@ numeric.cols <- c("age",
                   "total_products",
                   "num.transactions",
                   # num.added.names,
-                  num.purchases.names,
-                  total.products.names)
+                  num.purchases.names)
+                  # total.products.names)
                   # total.products.names)
 #
 # clust <- kmeans(rbind(df[,names(df) %in% numeric.cols],test[,names(test) %in% numeric.cols]),centers = 10)
@@ -126,7 +126,7 @@ best.map <- 0
 # for (depth in c(5)){
   # for (eta in c( 0.05)){
 depth <- 7
-eta <- 0.05
+eta <- 0.1
 # test <- test.save
 predictions         <- list()
 predictions_val     <- list()
@@ -145,7 +145,7 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta){
   model <- xgboost(data = dtrain,
                    max.depth = depth, 
                    eta = eta, nthread = 4,
-                   nround = 70, 
+                   nround = 300, 
                    subsample=0.75,
                    objective = "binary:logistic", 
                    verbose =1 ,
