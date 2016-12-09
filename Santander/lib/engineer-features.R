@@ -18,6 +18,7 @@ test <- as.data.frame(fread("cleaned_test.csv"))
 df <- df %>% 
   arrange(ncodpers)
 
+# correct antiguedad, which is sometimes not incremented or incremented more than once per month
 new.antiguedad <- df %>% 
   dplyr::select(ncodpers,month.id,antiguedad) %>%
   dplyr::group_by(ncodpers) %>%

@@ -16,5 +16,5 @@ val <- val %>%
   merge(purchased,by=c("ncodpers","month.id"))
 MAP <- mapk(k=7,strsplit(val$products, " "),strsplit(val$added_products," "))
 print(paste("Validation MAP@7 = ",MAP))
-# test.recs <- get.recommendations(test,products)
-# write.csv(test.recs,"recommendations_xgboost.csv",row.names = FALSE)
+test.recs <- get.recommendations(test,products)
+write.csv(test.recs,"recommendations_xgboost.csv",row.names = FALSE)

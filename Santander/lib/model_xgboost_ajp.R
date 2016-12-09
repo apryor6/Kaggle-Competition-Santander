@@ -17,9 +17,20 @@ set.seed(1)
 df   <- as.data.frame(fread("train_prepped.csv", stringsAsFactors = TRUE))
 test <- as.data.frame(fread("test_prepped.csv" , stringsAsFactors = TRUE))
 
-purchase.history <- fread("purchase-history.csv")
-df   <- merge(df,purchase.history,by=c("ncodpers","month.id"),sort=FALSE)
-test <- merge(test,purchase.history,by=c("ncodpers","month.id"),sort=FALSE)
+# purchase.history <- fread("purchase-history.csv")
+# df   <- merge(df,purchase.history,by=c("ncodpers","month.id"),sort=FALSE)
+# test <- merge(test,purchase.history,by=c("ncodpers","month.id"),sort=FALSE)
+# rm(purchase.history)
+
+purchase.count <- fread("purchase-count.csv")
+df   <- merge(df,purchase.count,by=c("ncodpers","month.id"),sort=FALSE)
+test <- merge(test,purchase.count,by=c("ncodpers","month.id"),sort=FALSE)
+rm(purchase.count)
+# this feature was to represent if somebody had recently moved, but no changes were made in first 6 months
+# recently.moved <- fread("feature-recently-moved.csv")
+# df   <- merge(df,recently.moved,by=c("ncodpers","month.id"),sort=FALSE)
+# test <- merge(test,recently.moved,by=c("ncodpers","month.id"),sort=FALSE)
+# rm(recently.moved)
 # make sure the factor levels agree
 factor.cols <- names(test)[sapply(test,is.factor)]
 for (col in factor.cols){
@@ -28,22 +39,30 @@ for (col in factor.cols){
 
 # there's a bunch of features related to the products, and thus they have similar
 # names. Separate them out to keep things straight
-labels          <- names(df)[grepl(".*_target",names(df))] # target values
-purchase.w      <- names(df)[grepl(".*.count",names(df))] # number of times a product has been bought in the past 5 months
-ownership.names <- names(df)[grepl("month\\_ago",names(df)) & !grepl("month\\.previous",names(df))] # various features indicating whether or not a product was owned X months ago
-drop.names      <- names(df)[grepl("dropped",names(df))] # various features indicating whether or not a product was owned X months ago
-add.names       <- names(df)[grepl("added",names(df))] # various features indicating whether or not a product was owned X months ago
-num.added.names <- names(df)[grepl("num\\.added",names(df))]  # total number of products added X months ago
+labels               <- names(df)[grepl(".*_target",names(df)) & !grepl("ahor|aval",names(df))] # target values
+purchase.w           <- names(df)[grepl(".*.count",names(df))] # number of times a product has been bought in the past 5 months
+ownership.names      <- names(df)[grepl("month\\_ago",names(df)) & !grepl("month\\.previous",names(df))] # various features indicating whether or not a product was owned X months ago
+drop.names           <- names(df)[grepl("dropped",names(df))] # various features indicating whether or not a product was owned X months ago
+add.names            <- names(df)[grepl("added",names(df))] # various features indicating whether or not a product was owned X months ago
+num.added.names      <- names(df)[grepl("num\\.added",names(df))]  # total number of products added X months ago
+num.purchases.names  <- names(df)[grepl("num\\.purchases",names(df))]  # total number of products added X months ago
+total.products.names <- names(df)[grepl("total\\.products",names(df))]  # total number of products owned X months ago
+
 # numeric features to use
 numeric.cols <- c("age",
                   "renta",
                   "antiguedad",
-                  purchase.w,
+                  # purchase.w,
                   "total_products",
                   "num.transactions",
-                  num.added.names)
+                  # num.added.names,
+                  num.purchases.names,
+                  total.products.names)
+                  # total.products.names)
 #
-
+# clust <- kmeans(rbind(df[,names(df) %in% numeric.cols],test[,names(test) %in% numeric.cols]),centers = 10)
+# df[["clust"]] <- as.factor(clust$cluster[1:nrow(df)])
+# test[["clust"]] <- as.factor(clust$cluster[(1+nrow(df)):length(clust$cluster)])
 # categorical features. These will be one-hot encoded
 categorical.cols <- c("sexo",
                       "ind_nuevo",
@@ -55,8 +74,7 @@ categorical.cols <- c("sexo",
                       "indrel",
                       "tiprel_1mes",
                       "ind_actividad_cliente",
-                      ownership.names,
-                      # added.products,
+                      ownership.names,                                     # added.products,
                       # dropped.products,
                       "canal_entrada")
             #canal entrada?
