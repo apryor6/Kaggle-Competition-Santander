@@ -14,9 +14,9 @@ source('project/Santander/lib/MAP.R')
 set.seed(1)
 
 # read data
-df   <- as.data.frame(fread("train_prepped.csv", stringsAsFactors = TRUE))
-test <- as.data.frame(fread("test_prepped.csv" , stringsAsFactors = TRUE))
-
+# df   <- as.data.frame(fread("train_prepped.csv", stringsAsFactors = TRUE))
+# test <- as.data.frame(fread("test_prepped.csv" , stringsAsFactors = TRUE))
+load("data_prepped.RData")
 
 # df$ind_actividad_cliente <- sample(c(0,1),nrow(df),replace=TRUE)
 # fraction.to.replace <- 0.50
