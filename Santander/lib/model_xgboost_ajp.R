@@ -1,4 +1,4 @@
-# setwd("~/kaggle/competition-santander/")
+setwd("~/kaggle/competition-santander/")
 library(tidyr)
 library(xgboost)
 library(plyr)
@@ -17,6 +17,26 @@ set.seed(1)
 df   <- as.data.frame(fread("train_prepped.csv", stringsAsFactors = TRUE))
 test <- as.data.frame(fread("test_prepped.csv" , stringsAsFactors = TRUE))
 
+
+# df$ind_actividad_cliente <- sample(c(0,1),nrow(df),replace=TRUE)
+# fraction.to.replace <- 0.50
+# ind.to.replace <- sample(nrow(df),round(nrow(df))*fraction.to.replace)
+# df$ind_actividad_cliente[ind.to.replace] <- df$ind_tjcr_fin_ult1_target[ind.to.replace]
+
+# purchase.history <- fread("purchase-history.csv")
+# df   <- merge(df,purchase.history,by=c("ncodpers","month.id"),sort=FALSE)
+# test <- merge(test,purchase.history,by=c("ncodpers","month.id"),sort=FALSE)
+# rm(purchase.history)
+
+purchase.count <- fread("purchase-count.csv")
+df   <- merge(df,purchase.count,by=c("ncodpers","month.id"),sort=FALSE)
+test <- merge(test,purchase.count,by=c("ncodpers","month.id"),sort=FALSE)
+rm(purchase.count)
+# this feature was to represent if somebody had recently moved, but no changes were made in first 6 months
+# recently.moved <- fread("feature-recently-moved.csv")
+# df   <- merge(df,recently.moved,by=c("ncodpers","month.id"),sort=FALSE)
+# test <- merge(test,recently.moved,by=c("ncodpers","month.id"),sort=FALSE)
+# rm(recently.moved)
 # make sure the factor levels agree
 factor.cols <- names(test)[sapply(test,is.factor)]
 for (col in factor.cols){
@@ -25,29 +45,60 @@ for (col in factor.cols){
 
 # there's a bunch of features related to the products, and thus they have similar
 # names. Separate them out to keep things straight
-labels <- names(df)[grepl(".*_target",names(df))] # target values
-purchase.w <- names(df)[grepl(".*.count",names(df))] # number of times a product has been bought in the past 5 months
-ownership.names <- names(df)[grepl("month\\_ago",names(df))] # various features indicating whether or not a product was owned X months ago
-
+labels               <- names(df)[grepl(".*_target",names(df)) & !grepl("ahor|aval",names(df))] # target values
+purchase.w           <- names(df)[grepl(".*.count",names(df))] # number of times a product has been bought in the past 5 months
+ownership.names      <- names(df)[grepl("month\\_ago",names(df)) & !grepl("month\\.previous",names(df))] # various features indicating whether or not a product was owned X months ago
+drop.names           <- names(df)[grepl("dropped",names(df))] # various features indicating whether or not a product was owned X months ago
+add.names            <- names(df)[grepl("added",names(df))] # various features indicating whether or not a product was owned X months ago
+num.added.names      <- names(df)[grepl("num\\.added",names(df))]  # total number of products added X months ago
+num.purchases.names  <- names(df)[grepl("num\\.purchases",names(df))]  # total number of products added X months ago
+total.products.names <- names(df)[grepl("total\\.products",names(df))]  # total number of products owned X months ago
+owned.within.names   <- names(df)[grepl("owned\\.within",names(df))]  # whether or not each product was owned with X months
 # numeric features to use
 numeric.cols <- c("age",
                   "renta",
                   "antiguedad",
-                  purchase.w,
+                  # purchase.w,
                   "total_products",
-                  "num.transactions")
-
+                  "num.transactions",
+                  # num.added.names,
+                  num.purchases.names)
+                  # total.products.names)
+                  # total.products.names)
+#
+# clust <- kmeans(rbind(df[,names(df) %in% numeric.cols],test[,names(test) %in% numeric.cols]),centers = 10)
+# df[["clust"]] <- as.factor(clust$cluster[1:nrow(df)])
+# test[["clust"]] <- as.factor(clust$cluster[(1+nrow(df)):length(clust$cluster)])
 # categorical features. These will be one-hot encoded
 categorical.cols <- c("sexo",
                       "ind_nuevo",
                       "ind_empleado",
                       "segmento",
-                      "conyuemp",
                       "nomprov",
-                      "indfall",
                       "indext",
                       "indresi",
-                      ownership.names)
+                      "indrel",
+                      "tiprel_1mes",
+                      # "ind_actividad_cliente",
+                      ownership.names,
+                      "birthday.month")
+                      # added.products,
+                      # dropped.products,
+                      # "canal_entrada")
+            #canal entrada?
+df$birthday.month   <- as.factor(month.abb[df$birthday.month])
+test$birthday.month <- as.factor(month.abb[test$birthday.month])
+# categorical.cols <- c("sexo",
+#                       "ind_nuevo",
+#                       "ind_empleado",
+#                       "segmento",
+#                       "conyuemp",
+#                       "nomprov",
+#                       "indfall",
+#                       "indext",
+#                       "indresi",
+#                       ownership.names)
+# 
 
 # one-hot encode the categorical features
 ohe <- dummyVars(~.,data = df[,names(df) %in% categorical.cols])
@@ -111,9 +162,10 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta){
   model <- xgboost(data = dtrain,
                    max.depth = depth,
                    eta = eta, nthread = 4,
-                   nround = 70,
-                   objective = "binary:logistic",
-                   verbose =0 ,
+                   nround = 80, 
+                   subsample=0.75,
+                   objective = "binary:logistic", 
+                   verbose =1 ,
                    print.every.n = 10)
   imp <- xgb.importance(feature_names = colnames(df),model=model)
   save(imp,file=paste("IMPORTANCE_",gsub("\\_target","",label.name),".RData",sep=""))
@@ -132,7 +184,7 @@ for (label in labels){
   accuracy <- mean(train.labels[[label]][-train.ind,1]==round(predictions_val[[label.count]]))
   # print(sprintf("Accuracy for label %s = %f",label,accuracy)) # accuracy not super useful for this task
   if (accuracy < 1){ # perfect accuracy causes some error with pROC
-  # print(pROC::auc(roc(train.labels[[label]][-train.ind,1],predictions_val[[label.count]])))
+  print(pROC::auc(roc(train.labels[[label]][-train.ind,1],predictions_val[[label.count]])))
   } else {
     # print("auc perfect")
   }

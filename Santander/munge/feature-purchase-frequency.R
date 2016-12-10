@@ -6,7 +6,7 @@ df     <- fread("cleaned_train.csv")
 labels <- names(df)[grepl("ind_+.*_+ult",names(df))]
 cols   <- c("ncodpers","month.id","month.previous.id",labels)
 df     <- df[df$month.id<6,names(df) %in% cols,with=FALSE]
-df     <- merge(df,df,by.x=c("ncodpers","month.previous.id"),by.y=c("ncodpers","month.id"),all.x=TRUE)
+df     <- merge(df[df$month.id>1,],df,by.x=c("ncodpers","month.previous.id"),by.y=c("ncodpers","month.id"),all.x=TRUE)
 
 df[is.na(df)] <- 0
 products <- rep("",nrow(df))
@@ -37,7 +37,7 @@ df     <- fread("cleaned_train.csv")
 labels <- names(df)[grepl("ind_+.*_+ult",names(df))]
 cols   <- c("ncodpers","month.id","month.previous.id",labels)
 df     <- df[(df$month.id<18) & (df$month.id>12),names(df) %in% cols,with=FALSE]
-df     <- merge(df,df,by.x=c("ncodpers","month.previous.id"),by.y=c("ncodpers","month.id"),all.x=TRUE)
+df     <- merge(df[df$month.id>13,],df,by.x=c("ncodpers","month.previous.id"),by.y=c("ncodpers","month.id"),all.x=TRUE)
 
 df[is.na(df)] <- 0
 products <- rep("",nrow(df))

@@ -8,14 +8,6 @@ test <- fread("xgboost_preds_test.csv")
 val  <- fread("xgboost_preds_val.csv")
 # test <- fread("caret_preds_test.csv")
 # val  <- fread("caret_preds_val.csv")
-# test <- fread("caret_gbm_preds_test.csv")
-# val  <- fread("caret_gbm_preds_val.csv")
-# test <- fread("caret_glmnet_preds_test.csv")
-# val  <- fread("caret_glmnet_preds_val.csv")
-
-# test <- fread("combined_preds_test.csv")
-# val  <- fread("combined_preds_val.csv")
-
 load("project/Santander/lib/products.Rdata")
 val.recs  <- get.recommendations(val,products)
 val$added_products <- val.recs$added_products
@@ -24,6 +16,5 @@ val <- val %>%
   merge(purchased,by=c("ncodpers","month.id"))
 MAP <- mapk(k=7,strsplit(val$products, " "),strsplit(val$added_products," "))
 print(paste("Validation MAP@7 = ",MAP))
-
 test.recs <- get.recommendations(test,products)
 write.csv(test.recs,"recommendations_xgboost.csv",row.names = FALSE)
