@@ -17,6 +17,12 @@ set.seed(1)
 df   <- as.data.frame(fread("train_prepped.csv", stringsAsFactors = TRUE))
 test <- as.data.frame(fread("test_prepped.csv" , stringsAsFactors = TRUE))
 
+
+# df$ind_actividad_cliente <- sample(c(0,1),nrow(df),replace=TRUE)
+# fraction.to.replace <- 0.50
+# ind.to.replace <- sample(nrow(df),round(nrow(df))*fraction.to.replace)
+# df$ind_actividad_cliente[ind.to.replace] <- df$ind_tjcr_fin_ult1_target[ind.to.replace]
+
 # purchase.history <- fread("purchase-history.csv")
 # df   <- merge(df,purchase.history,by=c("ncodpers","month.id"),sort=FALSE)
 # test <- merge(test,purchase.history,by=c("ncodpers","month.id"),sort=FALSE)
@@ -47,7 +53,7 @@ add.names            <- names(df)[grepl("added",names(df))] # various features i
 num.added.names      <- names(df)[grepl("num\\.added",names(df))]  # total number of products added X months ago
 num.purchases.names  <- names(df)[grepl("num\\.purchases",names(df))]  # total number of products added X months ago
 total.products.names <- names(df)[grepl("total\\.products",names(df))]  # total number of products owned X months ago
-
+owned.within.names   <- names(df)[grepl("owned\\.within",names(df))]  # whether or not each product was owned with X months
 # numeric features to use
 numeric.cols <- c("age",
                   "renta",
@@ -73,12 +79,15 @@ categorical.cols <- c("sexo",
                       "indresi",
                       "indrel",
                       "tiprel_1mes",
-                      "ind_actividad_cliente",
-                      ownership.names,                                     # added.products,
+                      # "ind_actividad_cliente",
+                      ownership.names,
+                      "birthday.month")
+                      # added.products,
                       # dropped.products,
-                      "canal_entrada")
+                      # "canal_entrada")
             #canal entrada?
-
+df$birthday.month   <- as.factor(month.abb[df$birthday.month])
+test$birthday.month <- as.factor(month.abb[test$birthday.month])
 # categorical.cols <- c("sexo",
 #                       "ind_nuevo",
 #                       "ind_empleado",
@@ -126,7 +135,7 @@ best.map <- 0
 # for (depth in c(5)){
   # for (eta in c( 0.05)){
 depth <- 7
-eta <- 0.1
+eta <- 0.05
 # test <- test.save
 predictions         <- list()
 predictions_val     <- list()
@@ -145,7 +154,7 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta){
   model <- xgboost(data = dtrain,
                    max.depth = depth, 
                    eta = eta, nthread = 4,
-                   nround = 300, 
+                   nround = 80, 
                    subsample=0.75,
                    objective = "binary:logistic", 
                    verbose =1 ,
