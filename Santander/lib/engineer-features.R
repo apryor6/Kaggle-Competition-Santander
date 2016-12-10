@@ -33,7 +33,7 @@ products <- names(df)[grepl("ind_+.*_+ult",names(df))]
 # we are training only on june 2015, so there is 5 months of history before that.
 # so I will consider only the 5 months before the testing date for creating features
 products.owned <- df %>%
-  filter(month.id <= 6 | month.id >=13) %>%
+  filter(month.id <= 6 | month.id >=12) %>%
   select(ncodpers,month.id,one_of(products)) %>%
   as.data.table()
 
@@ -166,8 +166,8 @@ products.owned$month.id <- original.month.id
 
 
 ## need to fix this
-df <- unique(df)
-test <- unique(test)
+# df <- unique(df)
+# test <- unique(test)
 
 purchase.frequencies <- fread("purchase.frequencies.csv")
 purchase.frequencies.later.csv <- fread("purchase.frequencies.later.csv")
@@ -213,23 +213,22 @@ ids.val.train <- purchased$ncodpers[purchased$month.id == val.train.month & (pur
 ids.val.test  <- purchased$ncodpers[purchased$month.id == val.test.month & (purchased$products!="")]
 ids.train     <- purchased$ncodpers[purchased$month.id == train.month & (purchased$products!="")]
 
-df <- df[df$ncodpers %in% ids,]
+df$birthday.month   <- as.factor(month.abb[df$birthday.month])
+test$birthday.month <- as.factor(month.abb[test$birthday.month])
+
+df <- select(df,-fecha_alta,-fecha_dato,-month.previous.id)
 
 val.train <- df %>% 
-  filter(ncodpers %in% ids.val.train & month.id==val.train.month) %>%
-  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id)
+  filter(ncodpers %in% ids.val.train & month.id==val.train.month)
 
 val.test <- df %>% 
-  filter(ncodpers %in% ids.val.test & month.id==val.test.month) %>%
-  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id)
+  filter(ncodpers %in% ids.val.test & month.id==val.test.month) 
 
 df <- df %>% 
-  filter(ncodpers %in% ids.train & month.id==train.month) %>%
-  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id)
+  filter(ncodpers %in% ids.train & month.id==train.month) 
 
 test <- test %>% 
-  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id) %>%
-  as.data.frame()
+  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id) 
 
 
 # recent.birthday  <- (fread("cleaned_train.csv")) %>%

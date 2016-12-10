@@ -31,6 +31,8 @@ load("data_prepped.RData")
 purchase.count <- fread("purchase-count.csv")
 df   <- merge(df,purchase.count,by=c("ncodpers","month.id"),sort=FALSE)
 test <- merge(test,purchase.count,by=c("ncodpers","month.id"),sort=FALSE)
+val.train   <- merge(val.train,purchase.count,by=c("ncodpers","month.id"),sort=FALSE)
+val.test <- merge(val.test,purchase.count,by=c("ncodpers","month.id"),sort=FALSE)
 rm(purchase.count)
 # this feature was to represent if somebody had recently moved, but no changes were made in first 6 months
 # recently.moved <- fread("feature-recently-moved.csv")
@@ -41,6 +43,7 @@ rm(purchase.count)
 factor.cols <- names(test)[sapply(test,is.factor)]
 for (col in factor.cols){
   df[[col]] <- factor(df[[col]],levels=levels(test[[col]]))
+  val.train[[col]] <- factor(val.train[[col]],levels=levels(val.test[[col]]))
 }
 
 # there's a bunch of features related to the products, and thus they have similar
@@ -79,37 +82,32 @@ categorical.cols <- c("sexo",
                       "indresi",
                       "indrel",
                       "tiprel_1mes",
+                      ownership.names[grepl("1month",ownership.names)],
                       # "ind_actividad_cliente",
-                      ownership.names,
+                      # ownership.names,
                       "birthday.month")
                       # added.products,
                       # dropped.products,
                       # "canal_entrada")
             #canal entrada?
-df$birthday.month   <- as.factor(month.abb[df$birthday.month])
-test$birthday.month <- as.factor(month.abb[test$birthday.month])
-# categorical.cols <- c("sexo",
-#                       "ind_nuevo",
-#                       "ind_empleado",
-#                       "segmento",
-#                       "conyuemp",
-#                       "nomprov",
-#                       "indfall",
-#                       "indext",
-#                       "indresi",
-#                       ownership.names)
-# 
+
 
 # one-hot encode the categorical features
 ohe <- dummyVars(~.,data = df[,names(df) %in% categorical.cols])
 ohe <- as(data.matrix(predict(ohe,df[,names(df) %in% categorical.cols])), "dgCMatrix")
 ohe.test <- dummyVars(~.,data = test[,names(test) %in% categorical.cols])
 ohe.test <- as(data.matrix(predict(ohe.test,test[,names(test) %in% categorical.cols])), "dgCMatrix")
-train.labels        <- list()
+ohe.val.train <- dummyVars(~.,data = val.train[,names(val.train) %in% categorical.cols])
+ohe.val.train <- as(data.matrix(predict(ohe.val.train,val.train[,names(val.train) %in% categorical.cols])), "dgCMatrix")
+ohe.val.test <- dummyVars(~.,data = val.test[,names(val.test) %in% categorical.cols])
+ohe.val.test <- as(data.matrix(predict(ohe.val.test,val.test[,names(val.test) %in% categorical.cols])), "dgCMatrix")
 
+train.labels        <- list()
+train.labels.val        <- list()
 # convert labels into XGBoost's sparse matrix representation
 for (label in labels){
-  train.labels[[label]] <- as(data.matrix(df[[label]]),'dgCMatrix')
+  train.labels[[label]]     <- as(data.matrix(df[[label]]),'dgCMatrix')
+  train.labels.val[[label]] <- as(data.matrix(val.train[[label]]),'dgCMatrix')
 }
 
 # remember the id's for people and months for later since all that actually goes
@@ -120,6 +118,13 @@ save.id.test       <- test$ncodpers
 save.month.id.test <- test$month.id
 df         <- cbind(ohe,data.matrix(df[,names(df) %in% numeric.cols]))
 test       <- cbind(ohe.test,data.matrix(test[,names(test) %in% numeric.cols]))
+
+save.id.val       <- val.train$ncodpers
+save.month.id.val <- val.train$month.id
+save.id.test.val       <- val.test$ncodpers
+save.month.id.test.val <- val.test$month.id
+val.train         <- cbind(ohe.val.train,data.matrix(val.train[,names(val.train) %in% numeric.cols]))
+val.test       <- cbind(ohe.val.test,data.matrix(val.test[,names(val.test) %in% numeric.cols]))
 set.seed(1)
 
 # use a 75/25 train/test split so we can compute MAP@7 locally. The test set
@@ -139,7 +144,7 @@ eta <- 0.05
 test <- test.save
 predictions         <- list()
 predictions_val     <- list()
-
+predictions_val_future     <- list()
 # this function takes in training/testing data and returns predicted probabilities
 build.predictions.xgboost <- function(df, test, label, label.name,depth,eta){
   library(xgboost)
@@ -169,7 +174,7 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta){
                    print.every.n = 10)
   imp <- xgb.importance(feature_names = colnames(df),model=model)
   save(imp,file=paste("IMPORTANCE_",gsub("\\_target","",label.name),".RData",sep=""))
-  # print(imp)
+  print(imp)
   predictions        <- list(predict(model,test))
   names(predictions) <- paste(gsub("_target","",label.name),"_pred",sep="")
   return(predictions)
@@ -191,6 +196,7 @@ for (label in labels){
   
   # now predict on the testing data
   predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta) )
+  predictions_val_future <- c(predictions_val_future,build.predictions.xgboost(val.train,val.test,train.labels.val[[label]],label,depth,eta) )
   label.count <- label.count + 1
   
 }
@@ -198,8 +204,10 @@ for (label in labels){
 # collect the results
 predictions <- as.data.table(predictions)
 predictions_val <- as.data.table(predictions_val)
+predictions_val_future <- as.data.table(predictions_val_future)
 test        <- as.data.table(cbind(data.frame(data.matrix(test)),predictions))
 val        <- as.data.table(cbind(data.frame(data.matrix(df[-train.ind,])),predictions_val))
+val_future        <- as.data.table(cbind(data.frame(data.matrix(val.test)),predictions_val_future))
 
 # can drop some of the data at this point and put back the id's
 test <- test[,grepl("ind_+.*_+ult",names(test)),with=FALSE]
@@ -209,6 +217,11 @@ test$month.id <- save.month.id.test
 val <- val[,grepl("ind_+.*_+ult",names(val)),with=FALSE]
 val$ncodpers <- save.id[-train.ind]
 val$month.id <- save.month.id[-train.ind]
+
+val_future <- val_future[,grepl("ind_+.*_+ult",names(val_future)),with=FALSE]
+val_future$ncodpers <- save.id.test.val
+val_future$month.id <- save.month.id.test.val
+
 products <- gsub("_target","",labels)
 
 # full <- as.data.frame(fread("cleaned_train.csv"))
@@ -226,7 +239,9 @@ names(test)[grepl("1month",names(test))] <- gsub("\\_1month\\_ago","",names(test
 val <- val %>%
   select(ncodpers,month.id,contains("_pred"),contains("1month"))
 names(val)[grepl("1month",names(val))] <- gsub("\\_1month\\_ago","",names(val)[grepl("1month",names(val))])
-
+val_future <- val_future %>%
+  select(ncodpers,month.id,contains("_pred"),contains("1month"))
+names(val_future)[grepl("1month",names(val_future))] <- gsub("\\_1month\\_ago","",names(val_future)[grepl("1month",names(val_future))])
 # save the results
 
 
@@ -240,6 +255,15 @@ val <- val %>%
 MAP <- mapk(k=7,strsplit(val$products, " "),strsplit(val$added_products," "))
 print(paste("Validation MAP@7 = ",MAP))
 
+val.recs.future  <- get.recommendations(as.data.table(val_future),products)
+val_future$added_products <- val.recs.future$added_products
+
+purchased <- as.data.frame(fread("purchased-products.csv"))
+val_future <- val_future %>%
+  merge(purchased,by=c("ncodpers","month.id"))
+MAP <- mapk(k=7,strsplit(val_future$products, " "),strsplit(val_future$added_products," "))
+print(paste("Validation future MAP@7 = ",MAP))
+
 # if (MAP > best.map){
   # best.map <- MAP
   # out.recs <- test.recs
@@ -252,6 +276,7 @@ print(paste("Validation MAP@7 = ",MAP))
 
   write.csv(test,"xgboost_preds_test.csv",row.names = FALSE)
   write.csv(val,"xgboost_preds_val.csv",row.names = FALSE)
+  write.csv(val_future,"xgboost_preds_val_future.csv",row.names = FALSE)
   save.image(file="saved.workspace.RData")
   
 # }
