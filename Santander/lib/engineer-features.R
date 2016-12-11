@@ -19,7 +19,7 @@ train.month     <- 6
 extra.train.months.val <- c(11)
 extra.train.months.test <- c(12)
 
-months.to.keep  <- c(val.train.month,val.test.month,train.month,extra.train.months)
+months.to.keep  <- c(val.train.month,val.test.month,train.month,extra.train.months.val,extra.train.months.test)
 df   <- fread("cleaned_train.csv")
 test <- fread("cleaned_test.csv")
 
@@ -245,6 +245,10 @@ extra.train.ids.val <- intersect(purchased$ncodpers[purchased$month.id %in% extr
 extra.train.ids.test <- intersect(purchased$ncodpers[purchased$month.id %in% extra.train.months.test & (purchased$products!="")],
                                  df$ncodpers[df$segmento.change==1 | df$activity.index.change==1])
 
+# extra.train.ids.val <- purchased$ncodpers[purchased$month.id %in% extra.train.months.val & (purchased$products!="")]
+# extra.train.ids.test <- purchased$ncodpers[purchased$month.id %in% extra.train.months.test & (purchased$products!="")]
+
+
 df$birthday.month   <- factor(month.abb[df$birthday.month],levels=month.abb)
 test$birthday.month <- factor(month.abb[test$birthday.month],levels=month.abb)
 
@@ -254,10 +258,10 @@ test$month <- factor(month.abb[test$month],levels=month.abb)
 df <- select(df,-fecha_alta,-fecha_dato,-month.previous.id)
 
 extra.train.val <- df %>% 
-  filter(ncodpers %in% extra.train.ids.val & month.id %in% extra.train.months)
+  filter(ncodpers %in% extra.train.ids.val & month.id %in% extra.train.months.val)
 
 extra.train.test <- df %>% 
-  filter(ncodpers %in% extra.train.ids.test & month.id %in% extra.train.months)
+  filter(ncodpers %in% extra.train.ids.test & month.id %in% extra.train.months.test)
 
 val.train <- df %>% 
   filter(ncodpers %in% ids.val.train & month.id %in% val.train.month)
