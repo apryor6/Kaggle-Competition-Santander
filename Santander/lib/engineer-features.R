@@ -16,24 +16,48 @@ set.seed(1)
 val.train.month <- 5
 val.test.month  <- 17
 train.month     <- 6
-extra.train.months <- c(12,14,16)
+extra.train.months.val <- c(11)
+extra.train.months.test <- c(12)
+
 months.to.keep  <- c(val.train.month,val.test.month,train.month,extra.train.months)
-df   <- (fread("cleaned_train.csv"))
-test <- as.data.frame(fread("cleaned_test.csv"))
+df   <- fread("cleaned_train.csv")
+test <- fread("cleaned_test.csv")
 
 # add activity index previous month
-recent.activity.index <- merge(df[,.(ncodpers,month.id,ind_actividad_cliente)],
-                               df[,.(ncodpers,month.id=month.id+1,old.ind_actividad_cliente=ind_actividad_cliente)],
+recent.activity.index <- merge(rbind(df[,.(ncodpers,month.id,ind_actividad_cliente,
+                                     segmento)],
+                                     test[,.(ncodpers,month.id,ind_actividad_cliente,
+                                           segmento)]),
+                               df[,.(ncodpers,month.id=month.id+1,
+                                     old.ind_actividad_cliente=ind_actividad_cliente,
+                                     old.segmento=segmento)],
                                by=c("ncodpers","month.id"),
                                sort=FALSE)
                                # all.x=TRUE) # might not want all.x here, means people that weren't customers last month will be considered to change activity
 # recent.activity.index[is.na(recent.activity.index)] <- 0
 recent.activity.index[,activity.index.change:=ind_actividad_cliente-old.ind_actividad_cliente]
+recent.activity.index[,segmento.change:=as.integer(segmento!=old.segmento)]
+df   <- merge(df,recent.activity.index[,.(ncodpers,
+                                          month.id,
+                                          old.ind_actividad_cliente,
+                                          activity.index.change,
+                                          old.segmento,
+                                          segmento.change)],
+              by=c("ncodpers","month.id"),all.x=TRUE)
 
-df   <- merge(df,recent.activity.index,by=c("ncodpers","month.id"),all.x=TRUE)
-test <- merge(test,recent.activity.index,by=c("ncodpers","month.id"),all.x=TRUE)
+test <- merge(test,recent.activity.index[,.(ncodpers,
+                                            month.id,
+                                            old.ind_actividad_cliente,
+                                            activity.index.change,
+                                            old.segmento,
+                                            segmento.change)],
+              by=c("ncodpers","month.id"),all.x=TRUE)
+
+df$old.segmento[is.na(df$old.segmento)] <- df$segmento[is.na(df$old.segmento)] 
+df$ind_actividad_cliente[is.na(df$ind_actividad_cliente)] <- df$old.ind_actividad_cliente[is.na(df$ind_actividad_cliente)] 
+
 df[is.na(df)] <- 0
-test[is.na(test)] <- 0
+# test[is.na(test)] <- 0
 
 products <- names(df)[grepl("ind_+.*_+ult",names(df))]
 
@@ -93,8 +117,8 @@ test <- as.data.frame(test)
 
 
 # compute total number of products owned previous month
-df$total_products <- rowSums(df[,names(df) %in% names(df)[grepl("1month\\_ago",names(df))]],na.rm=TRUE)
-test$total_products <- rowSums(test[,names(test) %in% names(test)[grepl("1month\\_ago",names(test))]],na.rm=TRUE)
+df$total_products <- rowSums(df[,names(df) %in% names(df)[grepl("ind.*1month\\_ago",names(df))]],na.rm=TRUE)
+test$total_products <- rowSums(test[,names(test) %in% names(test)[grepl("ind.*1month\\_ago",names(test))]],na.rm=TRUE)
 
 
 #### try inserting here instead
@@ -215,9 +239,11 @@ purchased <- as.data.frame(fread("purchased-products.csv"))
 ids.val.train   <- purchased$ncodpers[purchased$month.id %in% val.train.month & (purchased$products!="")]
 ids.val.test    <- purchased$ncodpers[purchased$month.id %in% val.test.month & (purchased$products!="")]
 ids.train       <- purchased$ncodpers[purchased$month.id %in% train.month & (purchased$products!="")]
-extra.train.ids <- intersect(purchased$ncodpers[purchased$month.id %in% extra.train.months & (purchased$products!="")],
-                             df$ncodpers[df$activity.index.change==1])
-
+# extra.train.ids <- purchased$ncodpers[purchased$month.id %in% extra.train.months & (purchased$products!="")]
+extra.train.ids.val <- intersect(purchased$ncodpers[purchased$month.id %in% extra.train.months.val & (purchased$products!="")],
+                             df$ncodpers[df$segmento.change==1 | df$activity.index.change==1])
+extra.train.ids.test <- intersect(purchased$ncodpers[purchased$month.id %in% extra.train.months.test & (purchased$products!="")],
+                                 df$ncodpers[df$segmento.change==1 | df$activity.index.change==1])
 
 df$birthday.month   <- factor(month.abb[df$birthday.month],levels=month.abb)
 test$birthday.month <- factor(month.abb[test$birthday.month],levels=month.abb)
@@ -227,8 +253,11 @@ test$month <- factor(month.abb[test$month],levels=month.abb)
 
 df <- select(df,-fecha_alta,-fecha_dato,-month.previous.id)
 
-extra.train <- df %>% 
-  filter(ncodpers %in% extra.train.ids & month.id %in% extra.train.months)
+extra.train.val <- df %>% 
+  filter(ncodpers %in% extra.train.ids.val & month.id %in% extra.train.months)
+
+extra.train.test <- df %>% 
+  filter(ncodpers %in% extra.train.ids.test & month.id %in% extra.train.months)
 
 val.train <- df %>% 
   filter(ncodpers %in% ids.val.train & month.id %in% val.train.month)
@@ -258,5 +287,5 @@ test <- test %>%
 # write.csv(df,"train_prepped.csv",row.names=FALSE)
 # write.csv(test,"test_prepped.csv",row.names=FALSE)
 
-save(df,test,val.train,val.test,extra.train,file="data_prepped.RData")
+save(df,test,val.train,val.test,extra.train.val,extra.train.test,file="data_prepped.RData")
 

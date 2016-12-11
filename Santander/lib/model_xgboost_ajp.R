@@ -19,8 +19,8 @@ set.seed(1)
 load("data_prepped.RData")
 use.extra.train.FLAG = TRUE
 if (use.extra.train.FLAG){
-  val.train <- rbind(val.train,extra.train)
-  df       <- rbind(df,extra.train)
+  val.train <- rbind(val.train,extra.train.val)
+  df       <- rbind(df,extra.train.test)
 }
 # df$ind_actividad_cliente <- sample(c(0,1),nrow(df),replace=TRUE)
 # fraction.to.replace <- 0.50
@@ -46,8 +46,8 @@ rm(purchase.count)
 # make sure the factor levels agree
 factor.cols <- names(test)[sapply(test,is.factor)]
 for (col in factor.cols){
-  df[[col]] <- factor(df[[col]],levels=levels(test[[col]]))
-  val.train[[col]] <- factor(val.train[[col]],levels=levels(val.test[[col]]))
+  df[[col]] <- factor(df[[col]],levels=union(levels(df[[col]]),levels(test[[col]])))
+  val.train[[col]] <- factor(val.train[[col]],levels=union(levels(val.train[[col]]),levels(val.test[[col]])))
 }
 
 # there's a bunch of features related to the products, and thus they have similar
@@ -89,6 +89,7 @@ categorical.cols <- c("sexo",
                       # ownership.names[grepl("1month",ownership.names)],
                       
                       ownership.names,
+                      "segmento.change",
                       "activity.index.change",
                       "ind_actividad_cliente",
                       "month")
