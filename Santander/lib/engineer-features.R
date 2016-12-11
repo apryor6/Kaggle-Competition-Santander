@@ -240,13 +240,13 @@ ids.val.train   <- purchased$ncodpers[purchased$month.id %in% val.train.month & 
 ids.val.test    <- purchased$ncodpers[purchased$month.id %in% val.test.month & (purchased$products!="")]
 ids.train       <- purchased$ncodpers[purchased$month.id %in% train.month & (purchased$products!="")]
 # extra.train.ids <- purchased$ncodpers[purchased$month.id %in% extra.train.months & (purchased$products!="")]
-extra.train.ids.val <- intersect(purchased$ncodpers[purchased$month.id %in% extra.train.months.val & (purchased$products!="")],
-                             df$ncodpers[df$segmento.change==1 | df$activity.index.change==1])
-extra.train.ids.test <- intersect(purchased$ncodpers[purchased$month.id %in% extra.train.months.test & (purchased$products!="")],
-                                 df$ncodpers[df$segmento.change==1 | df$activity.index.change==1])
+# extra.train.ids.val <- intersect(purchased$ncodpers[purchased$month.id %in% extra.train.months.val & (purchased$products!="")],
+                             # df$ncodpers[df$segmento.change==1 | df$activity.index.change==1])
+# extra.train.ids.test <- intersect(purchased$ncodpers[purchased$month.id %in% extra.train.months.test & (purchased$products!="")],
+                                 # df$ncodpers[df$segmento.change==1 | df$activity.index.change==1])
 
-# extra.train.ids.val <- purchased$ncodpers[purchased$month.id %in% extra.train.months.val & (purchased$products!="")]
-# extra.train.ids.test <- purchased$ncodpers[purchased$month.id %in% extra.train.months.test & (purchased$products!="")]
+extra.train.ids.val <- purchased$ncodpers[purchased$month.id %in% extra.train.months.val & (purchased$products!="")]
+extra.train.ids.test <- purchased$ncodpers[purchased$month.id %in% extra.train.months.test & (purchased$products!="")]
 
 
 df$birthday.month   <- factor(month.abb[df$birthday.month],levels=month.abb)
