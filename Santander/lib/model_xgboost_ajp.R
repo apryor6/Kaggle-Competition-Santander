@@ -17,7 +17,11 @@ set.seed(1)
 # df   <- as.data.frame(fread("train_prepped.csv", stringsAsFactors = TRUE))
 # test <- as.data.frame(fread("test_prepped.csv" , stringsAsFactors = TRUE))
 load("data_prepped.RData")
-
+use.extra.train.FLAG = TRUE
+if (use.extra.train.FLAG){
+  val.train <- rbind(val.train,extra.train)
+  df       <- rbind(df,extra.train)
+}
 # df$ind_actividad_cliente <- sample(c(0,1),nrow(df),replace=TRUE)
 # fraction.to.replace <- 0.50
 # ind.to.replace <- sample(nrow(df),round(nrow(df))*fraction.to.replace)
@@ -82,10 +86,14 @@ categorical.cols <- c("sexo",
                       "indresi",
                       "indrel",
                       "tiprel_1mes",
+                      # ownership.names[grepl("1month",ownership.names)],
+                      
                       ownership.names,
-                      # "ind_actividad_cliente",
+                      "activity.index.change",
+                      "ind_actividad_cliente",
+                      "month")
                       # ownership.names,
-                      "birthday.month")
+                      # "birthday.month")
                       # added.products,
                       # dropped.products,
                       # "canal_entrada")
@@ -154,7 +162,7 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta){
   # label.name: name of the label
   # depth:      XGBoost max tree depth
   # eta:        XGBoost learning rate
-  
+  set.seed(1)
   dtrain <- xgb.DMatrix(data = df, label=label)
   # model <- xgb.cv(data = dtrain,
                    # max.depth = depth, 
@@ -203,10 +211,10 @@ for (label in labels){
 
 # collect the results
 predictions <- as.data.table(predictions)
-predictions_val <- as.data.table(predictions_val)
+# predictions_val <- as.data.table(predictions_val)
 predictions_val_future <- as.data.table(predictions_val_future)
 test        <- as.data.table(cbind(data.frame(data.matrix(test)),predictions))
-val        <- as.data.table(cbind(data.frame(data.matrix(df[-train.ind,])),predictions_val))
+# val        <- as.data.table(cbind(data.frame(data.matrix(df[-train.ind,])),predictions_val))
 val_future        <- as.data.table(cbind(data.frame(data.matrix(val.test)),predictions_val_future))
 
 # can drop some of the data at this point and put back the id's
@@ -214,9 +222,9 @@ test <- test[,grepl("ind_+.*_+ult",names(test)),with=FALSE]
 test$ncodpers <- save.id.test
 test$month.id <- save.month.id.test
 
-val <- val[,grepl("ind_+.*_+ult",names(val)),with=FALSE]
-val$ncodpers <- save.id[-train.ind]
-val$month.id <- save.month.id[-train.ind]
+# val <- val[,grepl("ind_+.*_+ult",names(val)),with=FALSE]
+# val$ncodpers <- save.id[-train.ind]
+# val$month.id <- save.month.id[-train.ind]
 
 val_future <- val_future[,grepl("ind_+.*_+ult",names(val_future)),with=FALSE]
 val_future$ncodpers <- save.id.test.val
@@ -236,9 +244,9 @@ save(products,file="project/Santander/lib/products.Rdata")
 test <- test %>%
   select(ncodpers,month.id,contains("_pred"),contains("1month"))
 names(test)[grepl("1month",names(test))] <- gsub("\\_1month\\_ago","",names(test)[grepl("1month",names(test))])
-val <- val %>%
-  select(ncodpers,month.id,contains("_pred"),contains("1month"))
-names(val)[grepl("1month",names(val))] <- gsub("\\_1month\\_ago","",names(val)[grepl("1month",names(val))])
+# val <- val %>%
+#   select(ncodpers,month.id,contains("_pred"),contains("1month"))
+# names(val)[grepl("1month",names(val))] <- gsub("\\_1month\\_ago","",names(val)[grepl("1month",names(val))])
 val_future <- val_future %>%
   select(ncodpers,month.id,contains("_pred"),contains("1month"))
 names(val_future)[grepl("1month",names(val_future))] <- gsub("\\_1month\\_ago","",names(val_future)[grepl("1month",names(val_future))])
@@ -246,14 +254,14 @@ names(val_future)[grepl("1month",names(val_future))] <- gsub("\\_1month\\_ago","
 
 
 # test.recs <- get.recommendations(as.data.table(test),products)
-val.recs  <- get.recommendations(as.data.table(val),products)
-val$added_products <- val.recs$added_products
-
-purchased <- as.data.frame(fread("purchased-products.csv"))
-val <- val %>%
-  merge(purchased,by=c("ncodpers","month.id"))
-MAP <- mapk(k=7,strsplit(val$products, " "),strsplit(val$added_products," "))
-print(paste("Validation MAP@7 = ",MAP))
+# val.recs  <- get.recommendations(as.data.table(val),products)
+# val$added_products <- val.recs$added_products
+# 
+# purchased <- as.data.frame(fread("purchased-products.csv"))
+# val <- val %>%
+#   merge(purchased,by=c("ncodpers","month.id"))
+# MAP <- mapk(k=7,strsplit(val$products, " "),strsplit(val$added_products," "))
+# print(paste("Validation MAP@7 = ",MAP))
 
 val.recs.future  <- get.recommendations(as.data.table(val_future),products)
 val_future$added_products <- val.recs.future$added_products
@@ -275,9 +283,9 @@ print(paste("Validation future MAP@7 = ",MAP))
 # }
 
   write.csv(test,"xgboost_preds_test.csv",row.names = FALSE)
-  write.csv(val,"xgboost_preds_val.csv",row.names = FALSE)
+  # write.csv(val,"xgboost_preds_val.csv",row.names = FALSE)
   write.csv(val_future,"xgboost_preds_val_future.csv",row.names = FALSE)
-  save.image(file="saved.workspace.RData")
+  # save.image(file="saved.workspace.RData")
   
 # }
 # write.csv(out.recs,"recommendations_xgboost.csv",row.names = FALSE)

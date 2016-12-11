@@ -16,24 +16,31 @@ set.seed(1)
 val.train.month <- 5
 val.test.month  <- 17
 train.month     <- 6
-months.to.keep  <- c(val.train.month,val.test.month,train.month)
+extra.train.months <- c(12,14,16)
+months.to.keep  <- c(val.train.month,val.test.month,train.month,extra.train.months)
 df   <- (fread("cleaned_train.csv"))
 test <- as.data.frame(fread("cleaned_test.csv"))
 
-# df <- df %>% 
-  # arrange(ncodpers)
+# add activity index previous month
+recent.activity.index <- merge(df[,.(ncodpers,month.id,ind_actividad_cliente)],
+                               df[,.(ncodpers,month.id=month.id+1,old.ind_actividad_cliente=ind_actividad_cliente)],
+                               by=c("ncodpers","month.id"),
+                               sort=FALSE)
+                               # all.x=TRUE) # might not want all.x here, means people that weren't customers last month will be considered to change activity
+# recent.activity.index[is.na(recent.activity.index)] <- 0
+recent.activity.index[,activity.index.change:=ind_actividad_cliente-old.ind_actividad_cliente]
 
-# drop.products <- c("ind_ahor_fin_ult1","ind_aval_fin_ult1")
+df   <- merge(df,recent.activity.index,by=c("ncodpers","month.id"),all.x=TRUE)
+test <- merge(test,recent.activity.index,by=c("ncodpers","month.id"),all.x=TRUE)
+df[is.na(df)] <- 0
+test[is.na(test)] <- 0
 
-# remove some products that are extremely rare
-# df   <- df[,!names(df) %in% drop.products,with=FALSE]
-# test <- test[,!names(test) %in% drop.products]
 products <- names(df)[grepl("ind_+.*_+ult",names(df))]
 
 # we are training only on june 2015, so there is 5 months of history before that.
 # so I will consider only the 5 months before the testing date for creating features
 products.owned <- df %>%
-  filter(month.id <= 6 | month.id >=12) %>%
+  # filter(month.id <= 6 | month.id >=12) %>%
   select(ncodpers,month.id,one_of(products)) %>%
   as.data.table()
 
@@ -47,12 +54,6 @@ df <- df[month.id %in% months.to.keep,]
 test <- test[,!names(test) %in% products,with=FALSE] #lazy, but I'm removing product ownership because it is about to be readded month by month
 # original.month.id <- products.owned$month.id
 # df <- df[month.id=6,] # only train June 2015
-
-
-
-
-
-
 
 # create features indicating whether or not a product was owned in each of the past
 # 5 months. for each lag, match the month with the earlier one and through some name manipulation
@@ -84,6 +85,8 @@ for (month.ago in 1:5){
 }
 names(test)[names(test) %in% products] <- paste(names(test)[names(test) %in% products],"_1month_ago",sep="")
 # rm(list=c("products.owned","original.month.id"))
+
+
 
 df <- as.data.frame(df)
 test <- as.data.frame(test)
@@ -209,26 +212,38 @@ for (col in factor.cols){
 df$ult_fec_cli_1t[is.na(df$ult_fec_cli_1t)] <- "UNKNOWN"
 
 purchased <- as.data.frame(fread("purchased-products.csv"))
-ids.val.train <- purchased$ncodpers[purchased$month.id == val.train.month & (purchased$products!="")]
-ids.val.test  <- purchased$ncodpers[purchased$month.id == val.test.month & (purchased$products!="")]
-ids.train     <- purchased$ncodpers[purchased$month.id == train.month & (purchased$products!="")]
+ids.val.train   <- purchased$ncodpers[purchased$month.id %in% val.train.month & (purchased$products!="")]
+ids.val.test    <- purchased$ncodpers[purchased$month.id %in% val.test.month & (purchased$products!="")]
+ids.train       <- purchased$ncodpers[purchased$month.id %in% train.month & (purchased$products!="")]
+extra.train.ids <- intersect(purchased$ncodpers[purchased$month.id %in% extra.train.months & (purchased$products!="")],
+                             df$ncodpers[df$activity.index.change==1])
 
-df$birthday.month   <- as.factor(month.abb[df$birthday.month])
-test$birthday.month <- as.factor(month.abb[test$birthday.month])
+
+df$birthday.month   <- factor(month.abb[df$birthday.month],levels=month.abb)
+test$birthday.month <- factor(month.abb[test$birthday.month],levels=month.abb)
+
+df$month   <- factor(month.abb[df$month],levels=month.abb)
+test$month <- factor(month.abb[test$month],levels=month.abb)
 
 df <- select(df,-fecha_alta,-fecha_dato,-month.previous.id)
 
+extra.train <- df %>% 
+  filter(ncodpers %in% extra.train.ids & month.id %in% extra.train.months)
+
 val.train <- df %>% 
-  filter(ncodpers %in% ids.val.train & month.id==val.train.month)
+  filter(ncodpers %in% ids.val.train & month.id %in% val.train.month)
 
 val.test <- df %>% 
-  filter(ncodpers %in% ids.val.test & month.id==val.test.month) 
+  filter(ncodpers %in% ids.val.test & month.id %in% val.test.month) 
 
 df <- df %>% 
-  filter(ncodpers %in% ids.train & month.id==train.month) 
+  filter(ncodpers %in% ids.train & month.id %in% train.month) 
 
 test <- test %>% 
   dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id) 
+
+# val.test <- rbind(val.test,extra.train)
+# df       <- rbind(df,extra.train)
 
 
 # recent.birthday  <- (fread("cleaned_train.csv")) %>%
@@ -243,5 +258,5 @@ test <- test %>%
 # write.csv(df,"train_prepped.csv",row.names=FALSE)
 # write.csv(test,"test_prepped.csv",row.names=FALSE)
 
-save(df,test,val.train,val.test,file="data_prepped.RData")
+save(df,test,val.train,val.test,extra.train,file="data_prepped.RData")
 
