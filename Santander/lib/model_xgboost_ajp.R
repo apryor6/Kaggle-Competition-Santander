@@ -61,6 +61,9 @@ num.added.names      <- names(df)[grepl("num\\.added",names(df))]  # total numbe
 num.purchases.names  <- names(df)[grepl("num\\.purchases",names(df))]  # total number of products added X months ago
 total.products.names <- names(df)[grepl("total\\.products",names(df))]  # total number of products owned X months ago
 owned.within.names   <- names(df)[grepl("owned\\.within",names(df))]  # whether or not each product was owned with X months
+lagged.names         <- names(df)[grepl("lagged",names(df))]  # whether or not each product was owned with X months
+lagged.numeric.names <- lagged.names[grepl("age|antiguedad|renta|total\\_products",lagged.names)]
+lagged.cat.names     <- setdiff(lagged.names,lagged.numeric.names)
 # numeric features to use
 numeric.cols <- c("age",
                   "renta",
@@ -68,6 +71,7 @@ numeric.cols <- c("age",
                   # purchase.w,
                   "total_products",
                   "num.transactions",
+                  lagged.numeric.names,
                   # num.added.names,
                   num.purchases.names)
                   # total.products.names)
@@ -81,11 +85,12 @@ categorical.cols <- c("sexo",
                       "ind_nuevo",
                       "ind_empleado",
                       "segmento",
-                      "nomprov",
+                      # "nomprov",
                       "indext",
                       "indresi",
                       "indrel",
                       "tiprel_1mes",
+                      lagged.cat.names,
                       # ownership.names[grepl("1month",ownership.names)],
                       
                       ownership.names,

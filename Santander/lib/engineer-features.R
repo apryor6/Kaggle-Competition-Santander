@@ -11,6 +11,7 @@ library(lubridate)
 library(fasttime)
 source('project/Santander/lib/get_recommendations.R')
 source('project/Santander/lib/MAP.R')
+source('project/Santander/lib/create-lag-feature.R')
 
 set.seed(1)
 val.train.month <- 5
@@ -20,43 +21,54 @@ extra.train.months.val <- c(11)
 extra.train.months.test <- c(12)
 
 months.to.keep  <- c(val.train.month,val.test.month,train.month,extra.train.months.val,extra.train.months.test)
-df   <- fread("cleaned_train.csv")
-test <- fread("cleaned_test.csv")
+# df   <- fread("cleaned_train.csv")
+# test <- fread("cleaned_test.csv")
 
+df   <- rbind(fread("cleaned_train.csv"),
+              fread("cleaned_test.csv"))
+
+features.to.lag <- c("antiguedad","ind_actividad_cliente","age","renta","segmento","ind_nuevo")
+
+for (feature in features.to.lag) {
+  df <- create.lag.feature(df,feature,1:11,na.fill=0)
+}
+test <- df[month.id==18]
+df   <- df[month.id<18]
+print("Finished getting lag features")
 # add activity index previous month
-recent.activity.index <- merge(rbind(df[,.(ncodpers,month.id,ind_actividad_cliente,
-                                     segmento)],
-                                     test[,.(ncodpers,month.id,ind_actividad_cliente,
-                                           segmento)]),
-                               df[,.(ncodpers,month.id=month.id+1,
-                                     old.ind_actividad_cliente=ind_actividad_cliente,
-                                     old.segmento=segmento)],
-                               by=c("ncodpers","month.id"),
-                               sort=FALSE)
+# recent.activity.index <- merge(rbind(df[,.(ncodpers,month.id,ind_actividad_cliente,
+                                     # segmento)],
+                                     # test[,.(ncodpers,month.id,ind_actividad_cliente,
+                                           # segmento)]),
+                               # df[,.(ncodpers,month.id=month.id+1,
+                                     # old.ind_actividad_cliente=ind_actividad_cliente,
+                                     # old.segmento=segmento)],
+                               # by=c("ncodpers","month.id"),
+                               # sort=FALSE)
                                # all.x=TRUE) # might not want all.x here, means people that weren't customers last month will be considered to change activity
 # recent.activity.index[is.na(recent.activity.index)] <- 0
-recent.activity.index[,activity.index.change:=ind_actividad_cliente-old.ind_actividad_cliente]
-recent.activity.index[,segmento.change:=as.integer(segmento!=old.segmento)]
-df   <- merge(df,recent.activity.index[,.(ncodpers,
-                                          month.id,
-                                          old.ind_actividad_cliente,
-                                          activity.index.change,
-                                          old.segmento,
-                                          segmento.change)],
-              by=c("ncodpers","month.id"),all.x=TRUE)
+# recent.activity.index[,activity.index.change:=ind_actividad_cliente-old.ind_actividad_cliente]
+# recent.activity.index[,segmento.change:=as.integer(segmento!=old.segmento)]
+# df   <- merge(df,recent.activity.index[,.(ncodpers,
+                                          # month.id,
+                                          # old.ind_actividad_cliente,
+                                          # activity.index.change,
+                                          # old.segmento,
+                                          # segmento.change)],
+              # by=c("ncodpers","month.id"),all.x=TRUE)
 
-test <- merge(test,recent.activity.index[,.(ncodpers,
-                                            month.id,
-                                            old.ind_actividad_cliente,
-                                            activity.index.change,
-                                            old.segmento,
-                                            segmento.change)],
-              by=c("ncodpers","month.id"),all.x=TRUE)
+# test <- merge(test,recent.activity.index[,.(ncodpers,
+#                                             month.id,
+#                                             old.ind_actividad_cliente,
+#                                             activity.index.change,
+#                                             old.segmento,
+#                                             segmento.change)],
+#               by=c("ncodpers","month.id"),all.x=TRUE)
 
-df$old.segmento[is.na(df$old.segmento)] <- df$segmento[is.na(df$old.segmento)] 
-df$ind_actividad_cliente[is.na(df$ind_actividad_cliente)] <- df$old.ind_actividad_cliente[is.na(df$ind_actividad_cliente)] 
+# df$old.segmento[is.na(df$old.segmento)] <- df$segmento[is.na(df$old.segmento)] 
+# df$ind_actividad_cliente[is.na(df$ind_actividad_cliente)] <- df$old.ind_actividad_cliente[is.na(df$ind_actividad_cliente)] 
 
-df[is.na(df)] <- 0
+# df[is.na(df)] <- 0
 # test[is.na(test)] <- 0
 
 products <- names(df)[grepl("ind_+.*_+ult",names(df))]
@@ -116,10 +128,12 @@ test[is.na(test)] <- 0
 df <- as.data.frame(df)
 test <- as.data.frame(test)
 
-
 # compute total number of products owned previous month
 df$total_products <- rowSums(df[,names(df) %in% names(df)[grepl("ind.*1month\\_ago",names(df))]],na.rm=TRUE)
 test$total_products <- rowSums(test[,names(test) %in% names(test)[grepl("ind.*1month\\_ago",names(test))]],na.rm=TRUE)
+df <- create.lag.feature(rbind(df,test),"total_products",1:11,na.fill=0)
+test <- df[month.id==18]
+df   <- df[month.id<18]
 
 
 #### try inserting here instead
