@@ -82,7 +82,7 @@ test <- test[,!names(test) %in% products,with=FALSE] #lazy, but I'm removing pro
 # create features indicating whether or not a product was owned in each of the past
 # 5 months. for each lag, match the month with the earlier one and through some name manipulation
 # extract whether the product was owned or not
-for (month.ago in 1:10){
+for (month.ago in 1:12){
   print(paste("Collecting data on product ownership",month.ago,"months ago..."))
   products.owned[,month.id:=original.month.id+month.ago]
   df <- merge(df,products.owned,by=c("ncodpers","month.id"),all.x=TRUE)

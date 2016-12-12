@@ -92,8 +92,8 @@ categorical.cols <- c("sexo",
                       "segmento.change",
                       "activity.index.change",
                       "ind_actividad_cliente",
-                      "month",
-                      "canal_entrada")
+                      "month")
+                      # "canal_entrada")
                       # ownership.names,
                       # "birthday.month")
                       # added.products,
