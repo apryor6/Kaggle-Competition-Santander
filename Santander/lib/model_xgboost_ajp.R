@@ -65,7 +65,7 @@ owned.within.names   <- names(df)[grepl("owned\\.within",names(df))]  # whether 
 numeric.cols <- c("age",
                   "renta",
                   "antiguedad",
-                  # purchase.w,
+                  purchase.w,
                   "total_products",
                   "num.transactions",
                   # num.added.names,
@@ -179,6 +179,7 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta){
                    eta = eta, nthread = 4,
                    nround = 80, 
                    subsample=0.75,
+                   # colsample_bytree=0.5,
                    objective = "binary:logistic", 
                    verbose =1 ,
                    print.every.n = 10)
