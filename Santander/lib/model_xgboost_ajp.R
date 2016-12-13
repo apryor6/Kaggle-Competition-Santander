@@ -21,6 +21,11 @@ use.extra.train.FLAG = TRUE
 if (use.extra.train.FLAG){
   val.train <- rbind(val.train,extra.train.val)
   df       <- rbind(df,extra.train.test)
+  set.seed(1)
+  num.extra.samples2 <- 5000
+  val.train <- rbind(val.train,extra.samples2[sample(nrow(extra.samples2),num.extra.samples2),])
+  df        <- rbind(df,extra.samples2[sample(nrow(extra.samples2),num.extra.samples2),])
+  
 }
 # df$ind_actividad_cliente <- sample(c(0,1),nrow(df),replace=TRUE)
 # fraction.to.replace <- 0.50
@@ -44,6 +49,7 @@ rm(purchase.count)
 # test <- merge(test,recently.moved,by=c("ncodpers","month.id"),sort=FALSE)
 # rm(recently.moved)
 # make sure the factor levels agree
+
 factor.cols <- names(test)[sapply(test,is.factor)]
 for (col in factor.cols){
   df[[col]] <- factor(df[[col]],levels=union(levels(df[[col]]),levels(test[[col]])))
@@ -71,7 +77,7 @@ numeric.cols <- c("age",
                   # purchase.w,
                   "total_products",
                   "num.transactions",
-                  lagged.numeric.names,
+                  # lagged.numeric.names,
                   # num.added.names,
                   num.purchases.names)
                   # total.products.names)
@@ -90,7 +96,7 @@ categorical.cols <- c("sexo",
                       "indresi",
                       "indrel",
                       "tiprel_1mes",
-                      lagged.cat.names,
+                      # lagged.cat.names,
                       # ownership.names[grepl("1month",ownership.names)],
                       
                       ownership.names,

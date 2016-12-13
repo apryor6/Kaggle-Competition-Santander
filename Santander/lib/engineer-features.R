@@ -21,20 +21,20 @@ extra.train.months.val <- c(11)
 extra.train.months.test <- c(12)
 
 months.to.keep  <- c(val.train.month,val.test.month,train.month,extra.train.months.val,extra.train.months.test)
-# df   <- fread("cleaned_train.csv")
-# test <- fread("cleaned_test.csv")
+df   <- fread("cleaned_train.csv")
+test <- fread("cleaned_test.csv")
 
-df   <- rbind(fread("cleaned_train.csv"),
-              fread("cleaned_test.csv"))
+# df   <- rbind(fread("cleaned_train.csv"),
+              # fread("cleaned_test.csv"))
 
-features.to.lag <- c("antiguedad","ind_actividad_cliente","age","renta","segmento","ind_nuevo")
+# features.to.lag <- c("antiguedad","ind_actividad_cliente","age","renta","segmento","ind_nuevo")
 
-for (feature in features.to.lag) {
-  df <- create.lag.feature(df,feature,1:11,na.fill=0)
-}
-test <- df[month.id==18]
-df   <- df[month.id<18]
-print("Finished getting lag features")
+# for (feature in features.to.lag) {
+  # df <- create.lag.feature(df,feature,1:11,na.fill=0)
+# }
+# test <- df[month.id==18]
+# df   <- df[month.id<18]
+# print("Finished getting lag features")
 # add activity index previous month
 # recent.activity.index <- merge(rbind(df[,.(ncodpers,month.id,ind_actividad_cliente,
                                      # segmento)],
@@ -129,11 +129,15 @@ df <- as.data.frame(df)
 test <- as.data.frame(test)
 
 # compute total number of products owned previous month
-df$total_products <- rowSums(df[,names(df) %in% names(df)[grepl("ind.*1month\\_ago",names(df))]],na.rm=TRUE)
-test$total_products <- rowSums(test[,names(test) %in% names(test)[grepl("ind.*1month\\_ago",names(test))]],na.rm=TRUE)
-df <- create.lag.feature(rbind(df,test),"total_products",1:11,na.fill=0)
-test <- df[month.id==18]
-df   <- df[month.id<18]
+for (month.ago in 1:12){
+  print(paste("Counting total products owned",month.ago,"months ago"))
+  colname         <- paste("total_products.",month.ago,".months.ago")
+  df[[colname]]   <- rowSums(df[,names(df) %in% names(df)[grepl(paste("ind.*",month.ago,"month\\_ago",sep=""),names(df))]],na.rm=TRUE)
+  test[[colname]] <- rowSums(test[,names(test) %in% names(test)[grepl(paste("ind.*",month.ago,"month\\_ago",sep=""),names(test))]],na.rm=TRUE)
+}
+# df <- create.lag.feature(rbind(df,test),"total_products",1:11,na.fill=0)
+# test <- df[month.id==18]
+# df   <- df[month.id<18]
 
 
 #### try inserting here instead
@@ -272,6 +276,9 @@ test$month <- factor(month.abb[test$month],levels=month.abb)
 
 df <- select(df,-fecha_alta,-fecha_dato,-month.previous.id)
 
+# extra.samples2 <- df %>%
+  # filter(ind_actividad_cliente==ind_cco_fin_ult1_target | ind_actividad_cliente==ind_recibo_ult1_target | ind_actividad_cliente==ind_tjcr_fin_ult1_target)
+
 extra.train.val <- df %>% 
   filter(ncodpers %in% extra.train.ids.val & month.id %in% extra.train.months.val)
 
@@ -306,5 +313,5 @@ test <- test %>%
 # write.csv(df,"train_prepped.csv",row.names=FALSE)
 # write.csv(test,"test_prepped.csv",row.names=FALSE)
 
-save(df,test,val.train,val.test,extra.train.val,extra.train.test,file="data_prepped.RData")
+save(df,test,val.train,val.test,extra.train.val,extra.train.test,extra.samples2,file="data_prepped.RData")
 
