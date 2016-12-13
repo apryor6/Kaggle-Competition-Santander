@@ -1,6 +1,7 @@
 # This script outputs a csv file containing the number of times each product was
 # purchased in the last 5 months and the total number of transactions
 library(data.table)
+source('project/Santander/lib/create-lag-feature.R')
 # setwd('~/kaggle/competition-santander/')
 df     <- fread("cleaned_train.csv")
 labels <- names(df)[grepl("ind_+.*_+ult",names(df))]
@@ -27,6 +28,10 @@ purchase.frequencies$num.transactions <- num.transactions
 purchase.frequencies <- purchase.frequencies %>%
   dplyr::group_by(ncodpers) %>%
   dplyr::mutate(num.transactions = cumsum(num.transactions))
+purchase.frequencies <- create.lag.feature(as.data.table(purchase.frequencies),
+                                           "num.transactions",
+                                           1:11,
+                                           na.fill=0)
 write.csv(purchase.frequencies,"purchase.frequencies.csv",row.names=FALSE)
 
 
@@ -59,4 +64,8 @@ purchase.frequencies$num.transactions <- num.transactions
 purchase.frequencies <- purchase.frequencies %>%
   dplyr::group_by(ncodpers) %>%
   dplyr::mutate(num.transactions = cumsum(num.transactions))
+purchase.frequencies <- create.lag.feature(as.data.table(purchase.frequencies),
+                                           "num.transactions",
+                                           1:11,
+                                           na.fill=0)
 write.csv(purchase.frequencies,"purchase.frequencies.later.csv",row.names=FALSE)

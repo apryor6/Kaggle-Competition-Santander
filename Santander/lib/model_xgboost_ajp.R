@@ -10,7 +10,7 @@ library(pROC)
 library(lubridate)
 source('project/Santander/lib/get_recommendations.R')
 source('project/Santander/lib/MAP.R')
-
+source('project/Santander/lib/create-lag-feature.R')
 set.seed(1)
 
 # read data
@@ -37,6 +37,8 @@ df   <- merge(df,purchase.count,by=c("ncodpers","month.id"),sort=FALSE)
 test <- merge(test,purchase.count,by=c("ncodpers","month.id"),sort=FALSE)
 val.train   <- merge(val.train,purchase.count,by=c("ncodpers","month.id"),sort=FALSE)
 val.test <- merge(val.test,purchase.count,by=c("ncodpers","month.id"),sort=FALSE)
+
+
 rm(purchase.count)
 # this feature was to represent if somebody had recently moved, but no changes were made in first 6 months
 # recently.moved <- fread("feature-recently-moved.csv")
@@ -61,6 +63,8 @@ num.added.names      <- names(df)[grepl("num\\.added",names(df))]  # total numbe
 num.purchases.names  <- names(df)[grepl("num\\.purchases",names(df))]  # total number of products added X months ago
 total.products.names <- names(df)[grepl("total\\.products",names(df))]  # total number of products owned X months ago
 owned.within.names   <- names(df)[grepl("owned\\.within",names(df))]  # whether or not each product was owned with X months
+lagged.feature.names <- names(df)[grepl("lagged",names(df))]  # whether or not each product was owned with X months
+
 # numeric features to use
 numeric.cols <- c("age",
                   "renta",
@@ -70,7 +74,8 @@ numeric.cols <- c("age",
                   "num.transactions",
                   # num.added.names,
                   num.purchases.names,
-                  total.products.names)
+                  total.products.names,
+                  lagged.feature.names)
                   # total.products.names)
 #
 # clust <- kmeans(rbind(df[,names(df) %in% numeric.cols],test[,names(test) %in% numeric.cols]),centers = 10)
