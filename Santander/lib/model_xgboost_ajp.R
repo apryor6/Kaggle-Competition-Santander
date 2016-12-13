@@ -69,8 +69,8 @@ numeric.cols <- c("age",
                   "total_products",
                   "num.transactions",
                   # num.added.names,
-                  num.purchases.names)
-                  # total.products.names)
+                  num.purchases.names,
+                  total.products.names)
                   # total.products.names)
 #
 # clust <- kmeans(rbind(df[,names(df) %in% numeric.cols],test[,names(test) %in% numeric.cols]),centers = 10)

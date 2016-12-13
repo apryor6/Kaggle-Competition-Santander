@@ -11,7 +11,7 @@ df <- merge(df,full[,.(month.id,ncodpers,total.products)],by=c("month.id","ncodp
 purchase.count <- rbind(data.table(ncodpers=df$ncodpers,month.id=df$month.id),
                         data.table(ncodpers=unique(df$ncodpers),month.id=18))
 original.month.id <- df$month.id
-for (month.ago in 1:4){
+for (month.ago in 1:10){
   print(paste("Collecting number of purchases",month.ago,"months ago"))
   colname <- paste("num.purchases.",month.ago,".months.ago",sep="")
   df[,month.id:=original.month.id + month.ago]
@@ -20,7 +20,7 @@ for (month.ago in 1:4){
   
 }
 
-for (month.ago in 1:5){
+for (month.ago in 1:11){
   print(paste("Counting total products",month.ago,"months ago"))
 
   colname <- paste("total.products.",month.ago,".months.ago",sep="")
