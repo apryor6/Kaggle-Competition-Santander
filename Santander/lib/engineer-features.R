@@ -174,22 +174,22 @@ products.owned$month.id <- original.month.id
 # 
 # 
 # 
-# # windows of product ownership
-# for (product in products){
-#   for (window.size in 2:5){
-#     print(paste("Getting ownership for",product,"within last",window.size,"months"))
-#     colname <- paste(product,".owned.within.",window.size,"months",sep="")
-#     df[[colname]]   <- 0
-#     test[[colname]] <- 0
-#     for (month.ago in 1:window.size){
-#      current.col     <- paste(product,"_",month.ago,"month_ago",sep="")
-#      df[[colname]]   <- df[[colname]]  + df[[current.col]]
-#      test[[colname]] <- test[[colname]]  + test[[current.col]]
-#     }
-#     df[[colname]]   <- as.integer(df[[colname]] > 0)
-#     test[[colname]] <- as.integer(test[[colname]] > 0)
-#   }
-# }
+# windows of product ownership
+for (product in products){
+  for (window.size in 2:6){
+    print(paste("Getting ownership for",product,"within last",window.size,"months"))
+    colname <- paste(product,".owned.within.",window.size,"months",sep="")
+    df[[colname]]   <- 0
+    test[[colname]] <- 0
+    for (month.ago in 1:window.size){
+     current.col     <- paste(product,"_",month.ago,"month_ago",sep="")
+     df[[colname]]   <- df[[colname]]  + df[[current.col]]
+     test[[colname]] <- test[[colname]]  + test[[current.col]]
+    }
+    df[[colname]]   <- as.integer(df[[colname]] > 0)
+    test[[colname]] <- as.integer(test[[colname]] > 0)
+  }
+}
 
 
 

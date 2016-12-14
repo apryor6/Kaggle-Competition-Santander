@@ -100,7 +100,8 @@ categorical.cols <- c("sexo",
                       "month",
                       # "canal_entrada")
                       # ownership.names,
-                      "birthday.month")
+                      "birthday.month",
+                      owned.within.names)
                       # added.products,
                       # dropped.products,
                       # "canal_entrada")
@@ -184,7 +185,9 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta){
                    eta = eta, nthread = 4,
                    nround = 80, 
                    subsample=0.75,
-                   # colsample_bytree=0.5,
+                   colsample_bytree=0.5,
+                   seed=1,
+                   scale_pos_weight=0.5,
                    objective = "binary:logistic", 
                    verbose =1 ,
                    print.every.n = 10)
