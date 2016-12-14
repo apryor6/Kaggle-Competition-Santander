@@ -176,7 +176,7 @@ products.owned$month.id <- original.month.id
 # 
 # windows of product ownership
 for (product in products){
-  for (window.size in 2:6){
+  for (window.size in 2:12){
     print(paste("Getting ownership for",product,"within last",window.size,"months"))
     colname <- paste(product,".owned.within.",window.size,"months",sep="")
     df[[colname]]   <- 0

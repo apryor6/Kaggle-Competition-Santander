@@ -3,7 +3,7 @@ setwd("~/kaggle/competition-santander/")
 
 # Convert the .Rmd cleaning script to a regular R script
 source('project/Santander/lib/rmd2rscript.R')
-rmd2rscript("project/Santander/munge/santander-cleaning.RMD")
+rmd2rscript("project/Santander/munge/santander-cleaning.Rmd")
 
 # Clean the data
 source("project/Santander/munge/santander-cleaning[rmd2r].R")
@@ -11,8 +11,9 @@ source("project/Santander/munge/santander-cleaning[rmd2r].R")
 # Create file with products purchased each month
 source("project/Santander/munge/create-purchased-column.R")
 
-# Create purchase frequency feature
+# Create some purchasing features
 source("project/Santander/munge/feature-purchase-frequency.R")
+source("project/Santander/lib/purchases-by-month.R")
 
 # Engineer the rest of the features and do some minor cleaning before modeling
 source("project/Santander/lib/engineer-features.R")
