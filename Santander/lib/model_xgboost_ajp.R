@@ -60,7 +60,9 @@ add.names            <- names(df)[grepl("added",names(df))] # various features i
 num.added.names      <- names(df)[grepl("num\\.added",names(df))]  # total number of products added X months ago
 num.purchases.names  <- names(df)[grepl("num\\.purchases",names(df))]  # total number of products added X months ago
 total.products.names <- names(df)[grepl("total\\.products",names(df))]  # total number of products owned X months ago
-owned.within.names   <- names(df)[grepl("owned\\.within",names(df))]  # whether or not each product was owned with X months
+window.feature.names <- names(df)[grepl("within",names(df))]  # whether or not each product was owned with X months
+numeric.window.feature.names <- window.feature.names[grepl("transactions",window.feature.names)]
+window.feature.names <- setdiff(window.feature.names,numeric.window.feature.names)
 # numeric features to use
 numeric.cols <- c("age",
                   "renta",
@@ -69,7 +71,8 @@ numeric.cols <- c("age",
                   "total_products",
                   "num.transactions",
                   # num.added.names,
-                  num.purchases.names)
+                  num.purchases.names,
+                  numeric.window.feature.names)
                   # total.products.names)
                   # total.products.names)
 #
@@ -93,7 +96,7 @@ categorical.cols <- c("sexo",
                       "activity.index.change",
                       "ind_actividad_cliente",
                       "month",
-                      owned.within.names,
+                      window.feature.names,
                       # "canal_entrada")
                       # ownership.names,
                       "birthday.month")

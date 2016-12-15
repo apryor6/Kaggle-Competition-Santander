@@ -176,7 +176,7 @@ products.owned$month.id <- original.month.id
 # 
 # windows of product ownership
 for (product in products){
-  for (window.size in 2:12){
+  for (window.size in 2:11){
     print(paste("Getting ownership for",product,"within last",window.size,"months"))
     colname <- paste(product,".owned.within.",window.size,"months",sep="")
     df[[colname]]   <- 0
@@ -192,16 +192,33 @@ for (product in products){
 }
 
 
+# windows of purchase history
+for (product in products){
+  for (window.size in 2:10){
+    print(paste("Getting purchase history for",product,"within last",window.size,"months"))
+    colname <- paste(product,".added.within.",window.size,"months",sep="")
+    df[[colname]]   <- 0
+    test[[colname]] <- 0
+    for (month.ago in 1:window.size){
+      current.col.new     <- paste(product,"_",month.ago,"month_ago",sep="")
+      current.col.old     <- paste(product,"_",month.ago+1,"month_ago",sep="")
+      df[[colname]]   <- df[[colname]]  + as.integer((df[[current.col.new]]-df[[current.col.old]]) > 0)
+      test[[colname]] <- test[[colname]]  + as.integer((test[[current.col.new]]-test[[current.col.old]]) > 0)
+    }
+    df[[colname]]   <- as.integer(df[[colname]] > 0)
+    test[[colname]] <- as.integer(test[[colname]] > 0)
+  }
+}
+
 
 ## need to fix this
 # df <- unique(df)
 # test <- unique(test)
 
 purchase.frequencies <- fread("purchase.frequencies.csv")
-purchase.frequencies.later.csv <- fread("purchase.frequencies.later.csv")
 
 df   <- merge(df,purchase.frequencies,by=c("month.id","ncodpers"),all.x = TRUE)
-test <- merge(test,purchase.frequencies.later.csv,by=c("month.id","ncodpers"), all.x=TRUE)
+test <- merge(test,purchase.frequencies,by=c("month.id","ncodpers"), all.x=TRUE)
 df[is.na(df)] <- 0
 test[is.na(test)] <- 0
 
