@@ -8,6 +8,8 @@ This is a detailed description of our best solution to the [Santander Product Re
 
 ### Solution Summary
 
+*Most of the code used in this competition has been slightly modified for embedding in this document and includes additional comments/explanations, but the full, original code is also available [on Github]() along with instructions for running it*
+
 Our solution was a collection of 22 XGBoost trained on data from June 2015 and December 2015 for only accounts that added products with an additional NUMBER-HERE engineered features (described below). Really it was just one XGBoost model that was trained once for each of the 22 products in turn as the target label. Technically there were 24 products, but two of them, `ind_aval_fin_ult1` and `ind_ahor_fin_ult1`, were discarded for being exceedingly rare. The resulting probabilities for each of the 22 remaining products in June 2016 were sorted, and for each account the top 7 products that were not owned in May 2016 were recommended as the final solution.
 
 There were a couple of key insights that were critical to sucess in this competition. The first was limiting the dataset to only accounts that actually added any products. Note that the challenge is to predict which products a customer will by *if any*. We don't need to determine the likelihood that they actually make the purchase, and as the final score is evaluated using mean average precision ([MAP@7](https://www.kaggle.com/wiki/MeanAveragePrecision)), any recommendations made to accounts that don't purchase anything does not affect the score negatively. Adding products is a rare event and limiting only to entries where products were added reduces the dataset size from about 1 million entries per month to a much more reasonable 20-40,000.
@@ -16,23 +18,13 @@ Second, we found that the testing month, June, is special in Spain because that 
 
 The third realization was that the most useful features were those related to product ownership. After looking at the feature importance outputted by XGBoost, I added the product ownership status for each of the previous 2-5 months as features in addition to the most recent month and applied the above strategy to produce a <MAP@7> greater than 0.03, which would have resulted in a top 100 finish and a bronze medal. These lagged ownership features were limited to 5 months because the earliest data was from Jan. 2015 and thus this was the furthest back we could go. If I were actually being contracted by Santander to build a recommendation system, this is likely where I would stop. Estimates of the maximum possible score [were around 0.035](https://kaggle2.blob.core.windows.net/forum-message-attachments/146271/5405/Private%20maximum%20score.png?sv=2015-12-11&sr=b&sig=c4ljinra%2F8PXV85C8TuSBfHM3CeyrOKkKXDhI01yJIY%3D&se=2016-12-19T18%3A27%3A15Z&sp=r), so with this fairly simple approach we have already achieved more than 85% of the maximum possible precision. The additional time invested and model complexity added to increase performance from 0.03 to 0.0305 (HOW MANY PLACES) was significant. But this is a competition so we press on.
 
-``` r
-summary(cars)
-```
+The decision to train on December 2015 resulted from my trying to engineer more features related to product ownership. I figured there is a trade-off between 1) the advantage of capturing June-specific trends by training on June and 2) capturing product ownership trends by training on later months that have a longer history. I was in the process of exploring which months had similar purchasing patterns to June when Kaggler [AMZ](https://www.kaggle.com/albertomz) posted [this analysis](https://www.kaggle.com/c/santander-product-recommendation/forums/t/26138/interesting-relationship-between-june-and-december?forumMessageId=148422). He found December to be most similar to June and saved me some time, so many thanks to him for that. Training examples in December can contain up to 11 months of historical ownership features, the inclusion of which improved precision to ~0.0304 (TOP WHAT PERCENT??).
 
-    ##      speed           dist       
-    ##  Min.   : 4.0   Min.   :  2.00  
-    ##  1st Qu.:12.0   1st Qu.: 26.00  
-    ##  Median :15.0   Median : 36.00  
-    ##  Mean   :15.4   Mean   : 42.98  
-    ##  3rd Qu.:19.0   3rd Qu.: 56.00  
-    ##  Max.   :25.0   Max.   :120.00
+The final improvement to WHAT SCORE? was the result of the following additional features (mostly product related):
 
-Including Plots
----------------
+-   one
+-   two
+-   three
 
-You can also embed plots, for example:
-
-![](Solution_p1_files/figure-markdown_github/pressure-1.png)
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+W
+-
