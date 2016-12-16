@@ -22,6 +22,9 @@ if (use.extra.train.FLAG){
   val.train <- rbind(val.train,extra.train.val)
   df       <- rbind(df,extra.train.test)
 }
+# df[df<0] <- 0
+# val.train[val.train<0] <- 0
+
 # df$ind_actividad_cliente <- sample(c(0,1),nrow(df),replace=TRUE)
 # fraction.to.replace <- 0.50
 # ind.to.replace <- sample(nrow(df),round(nrow(df))*fraction.to.replace)
@@ -60,7 +63,9 @@ add.names            <- names(df)[grepl("added",names(df))] # various features i
 num.added.names      <- names(df)[grepl("num\\.added",names(df))]  # total number of products added X months ago
 num.purchases.names  <- names(df)[grepl("num\\.purchases",names(df))]  # total number of products added X months ago
 total.products.names <- names(df)[grepl("total\\.products",names(df))]  # total number of products owned X months ago
-owned.within.names   <- names(df)[grepl("owned\\.within",names(df))]  # whether or not each product was owned with X months
+window.feature.names <- names(df)[grepl("within",names(df))]  # whether or not each product was owned with X months
+# numeric.window.feature.names <- window.feature.names[grepl("transactions",window.feature.names)]
+# window.feature.names <- setdiff(window.feature.names,numeric.window.feature.names)
 # numeric features to use
 numeric.cols <- c("age",
                   "renta",
@@ -70,8 +75,9 @@ numeric.cols <- c("age",
                   "num.transactions",
                   # num.added.names,
                   num.purchases.names)
-                  # total.products.names)
-                  # total.products.names)
+# numeric.window.feature.names)
+# total.products.names)
+# total.products.names)
 #
 # clust <- kmeans(rbind(df[,names(df) %in% numeric.cols],test[,names(test) %in% numeric.cols]),centers = 10)
 # df[["clust"]] <- as.factor(clust$cluster[1:nrow(df)])
@@ -89,18 +95,18 @@ categorical.cols <- c("sexo",
                       # ownership.names[grepl("1month",ownership.names)],
                       
                       ownership.names,
-                      owned.within.names,
                       "segmento.change",
                       "activity.index.change",
                       "ind_actividad_cliente",
                       "month",
-#                       "canal_entrada",
+                      window.feature.names,
+                      # "canal_entrada")
                       # ownership.names,
                       "birthday.month")
-                      # added.products,
-                      # dropped.products,
-                      # "canal_entrada")
-            #canal entrada?
+# added.products,
+# dropped.products,
+# "canal_entrada")
+#canal entrada?
 
 
 # one-hot encode the categorical features
@@ -125,17 +131,17 @@ for (label in labels){
 # into xgboost is the raw feature data
 save.id       <- df$ncodpers
 save.month.id <- df$month.id
-save.month    <- df$month
+save.month <- df$month
 save.id.test       <- test$ncodpers
 save.month.id.test <- test$month.id
 df         <- cbind(ohe,data.matrix(df[,names(df) %in% numeric.cols]))
 test       <- cbind(ohe.test,data.matrix(test[,names(test) %in% numeric.cols]))
 
 save.id.val       <- val.train$ncodpers
+save.month.val    <- val.train$month
 save.month.id.val <- val.train$month.id
 save.id.test.val       <- val.test$ncodpers
 save.month.id.test.val <- val.test$month.id
-save.month.val    <- val.train$month
 val.train         <- cbind(ohe.val.train,data.matrix(val.train[,names(val.train) %in% numeric.cols]))
 val.test       <- cbind(ohe.val.test,data.matrix(val.test[,names(val.test) %in% numeric.cols]))
 set.seed(1)
@@ -148,18 +154,21 @@ train.ind  <- createDataPartition(1:nrow(df),p=0.75)[[1]]
 # a grid search and these parameters were okay so I commented it out for now. You just 
 # simply scan parameters and save the ones that gave you the best local MAP@7 on the validation data
 
-test.save <- test
+# test.save <- test
+val.save <- val_future
 best.map <- 0
-# for (depth in c(3,5,7,9,11,15)){
-  # for (eta in c(0.01,0.025, 0.05,0.1,0.25,0.5)){
-depth <- 7
-eta <- 0.05
-test <- test.save
+for (depth in c(5,6,7)){
+for (eta in c(0.075,0.1,0.12,0.15,0.15)){
+  for (nrounds in c(60,70,75,80,90)){
+# depth <- 7
+# eta <- 0.05
+# test <- test.save
+    val_future <- val.save
 predictions         <- list()
 predictions_val     <- list()
 predictions_val_future     <- list()
 # this function takes in training/testing data and returns predicted probabilities
-build.predictions.xgboost <- function(df, test, label, label.name,depth,eta,weights){
+build.predictions.xgboost <- function(df, test, label, label.name,depth,eta,nrounds,weight){
   library(xgboost)
   # df:         training data
   # test:       the data to predict on
@@ -168,27 +177,27 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta,weig
   # depth:      XGBoost max tree depth
   # eta:        XGBoost learning rate
   set.seed(1)
-  dtrain <- xgb.DMatrix(data = df, label=label,weight=weights)
+  dtrain <- xgb.DMatrix(data = df, label=label, weight=weight)
   # model <- xgb.cv(data = dtrain,
-                   # max.depth = depth, 
-                   # eta = eta, nthread = 4,
-                   # nround = 100, 
-                   # objective = "binary:logistic", 
-                   # verbose =1 ,
-                   # print.every.n = 10,
-                  # nfold=5)
+  # max.depth = depth, 
+  # eta = eta, nthread = 4,
+  # nround = 100, 
+  # objective = "binary:logistic", 
+  # verbose =1 ,
+  # print.every.n = 10,
+  # nfold=5)
   model <- xgboost(data = dtrain,
                    max.depth = depth,
                    eta = eta, nthread = 4,
-                   nround = 80, 
+                   nround = nrounds, 
                    subsample=0.75,
                    # colsample_bytree=0.5,
                    objective = "binary:logistic", 
-                   verbose =1 ,
+                   verbose =0,
                    print.every.n = 10)
-  imp <- xgb.importance(feature_names = colnames(df),model=model)
-  save(imp,file=paste("IMPORTANCE_",gsub("\\_target","",label.name),".RData",sep=""))
-  print(imp)
+#  imp <- xgb.importance(feature_names = colnames(df),model=model)
+ # save(imp,file=paste("IMPORTANCE_",gsub("\\_target","",label.name),".RData",sep=""))
+  #print(imp)
   predictions        <- list(predict(model,test))
   names(predictions) <- paste(gsub("_target","",label.name),"_pred",sep="")
   return(predictions)
@@ -199,35 +208,34 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta,weig
 label.count <- 1
 for (label in labels){
   # the syntax for indexing train.labels is messy but functional
-  # predictions_val <- c(predictions_val,build.predictions.xgboost(df[train.ind,],df[-train.ind,],train.labels[[label]][train.ind,1,drop=F],label,depth,eta) )
+  # predictions_val <- c(predictions_val,build.predictions.xgboost(df[train.ind,],df[-train.ind,],train.labels[[label]][train.ind,1,drop=F],label,depth,eta, weight=ifelse(=="")) )
   # accuracy <- mean(train.labels[[label]][-train.ind,1]==round(predictions_val[[label.count]]))
   # print(sprintf("Accuracy for label %s = %f",label,accuracy)) # accuracy not super useful for this task
   # if (accuracy < 1){ # perfect accuracy causes some error with pROC
   # print(pROC::auc(roc(train.labels[[label]][-train.ind,1],predictions_val[[label.count]])))
   # } else {
-    # print("auc perfect")
+  # print("auc perfect")
   # }
   
   # now predict on the testing data
-downweight.factor <- 2
-predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta,ifelse(save.month=="Jun",1,downweight.factor)) )
-  predictions_val_future <- c(predictions_val_future,build.predictions.xgboost(val.train,val.test,train.labels.val[[label]],label,depth,eta,ifelse(save.month.val=="May",1,downweight.factor)) )
+  # predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta,nrounds,weight=ifelse(df$month=="Jun",1,0.75)) )
+  predictions_val_future <- c(predictions_val_future,build.predictions.xgboost(val.train,val.test,train.labels.val[[label]],label,depth,eta,nrounds,weight=ifelse(save.month.val=="May",1,0.75)) )
   label.count <- label.count + 1
   
 }
 
 # collect the results
-predictions <- as.data.table(predictions)
+# predictions <- as.data.table(predictions)
 # predictions_val <- as.data.table(predictions_val)
 predictions_val_future <- as.data.table(predictions_val_future)
-test        <- as.data.table(cbind(data.frame(data.matrix(test)),predictions))
+# test        <- as.data.table(cbind(data.frame(data.matrix(test)),predictions))
 # val        <- as.data.table(cbind(data.frame(data.matrix(df[-train.ind,])),predictions_val))
 val_future        <- as.data.table(cbind(data.frame(data.matrix(val.test)),predictions_val_future))
 
 # can drop some of the data at this point and put back the id's
-test <- test[,grepl("ind_+.*_+ult",names(test)),with=FALSE]
-test$ncodpers <- save.id.test
-test$month.id <- save.month.id.test
+# test <- test[,grepl("ind_+.*_+ult",names(test)),with=FALSE]
+# test$ncodpers <- save.id.test
+# test$month.id <- save.month.id.test
 
 # val <- val[,grepl("ind_+.*_+ult",names(val)),with=FALSE]
 # val$ncodpers <- save.id[-train.ind]
@@ -242,15 +250,15 @@ products <- gsub("_target","",labels)
 # full <- as.data.frame(fread("cleaned_train.csv"))
 
 # the features containing "1month_ago" will tell us whether or not a product is a new purchase in our predictions
-owned.products <- names(test)[grepl("1month\\_ago",names(test)) & !(grepl("_pred",names(test)))]
+# owned.products <- names(test)[grepl("1month\\_ago",names(test)) & !(grepl("_pred",names(test)))]
 
 # save the products for use in the recommendation script
-save(products,file="project/Santander/lib/products.Rdata")
+# save(products,file="project/Santander/lib/products.Rdata")
 
 # put the predictions in the right format 
-test <- test %>%
-  select(ncodpers,month.id,contains("_pred"),contains("1month"))
-names(test)[grepl("1month",names(test))] <- gsub("\\_1month\\_ago","",names(test)[grepl("1month",names(test))])
+# test <- test %>%
+  # select(ncodpers,month.id,contains("_pred"),contains("1month"))
+# names(test)[grepl("1month",names(test))] <- gsub("\\_1month\\_ago","",names(test)[grepl("1month",names(test))])
 # val <- val %>%
 #   select(ncodpers,month.id,contains("_pred"),contains("1month"))
 # names(val)[grepl("1month",names(val))] <- gsub("\\_1month\\_ago","",names(val)[grepl("1month",names(val))])
@@ -279,20 +287,23 @@ val_future <- val_future %>%
 MAP <- mapk(k=7,strsplit(val_future$products, " "),strsplit(val_future$added_products," "))
 print(paste("Validation future MAP@7 = ",MAP))
 
-# if (MAP > best.map){
-  # best.map <- MAP
-  # out.recs <- test.recs
-  # best.depth <- depth
-  # best.eta <- eta
-  
-# }
-  # }
-# }
+if (MAP > best.map){
+best.map <- MAP
+# out.recs <- test.recs
+best.depth <- depth
+best.eta <- eta
+best.nrounds <- nrounds
+print(paste("Best depth = ", best.depth))
+print(paste("Best eta = ", best.eta))
+print(paste("Best nrounds = ", best.nrounds))
+}
+}
+}
+}
+# write.csv(test,"xgboost_preds_test.csv",row.names = FALSE)
+# write.csv(val,"xgboost_preds_val.csv",row.names = FALSE)
+# write.csv(val_future,"xgboost_preds_val_future.csv",row.names = FALSE)
+# save.image(file="saved.workspace.RData")
 
-  write.csv(test,"xgboost_preds_test.csv",row.names = FALSE)
-  # write.csv(val,"xgboost_preds_val.csv",row.names = FALSE)
-  write.csv(val_future,"xgboost_preds_val_future.csv",row.names = FALSE)
-  # save.image(file="saved.workspace.RData")
-  
 # }
 # write.csv(out.recs,"recommendations_xgboost.csv",row.names = FALSE)

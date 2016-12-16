@@ -22,6 +22,9 @@ if (use.extra.train.FLAG){
   val.train <- rbind(val.train,extra.train.val)
   df       <- rbind(df,extra.train.test)
 }
+ df[df<0] <- 0
+ val.train[val.train<0] <- 0
+
 # df$ind_actividad_cliente <- sample(c(0,1),nrow(df),replace=TRUE)
 # fraction.to.replace <- 0.50
 # ind.to.replace <- sample(nrow(df),round(nrow(df))*fraction.to.replace)
@@ -60,7 +63,9 @@ add.names            <- names(df)[grepl("added",names(df))] # various features i
 num.added.names      <- names(df)[grepl("num\\.added",names(df))]  # total number of products added X months ago
 num.purchases.names  <- names(df)[grepl("num\\.purchases",names(df))]  # total number of products added X months ago
 total.products.names <- names(df)[grepl("total\\.products",names(df))]  # total number of products owned X months ago
-owned.within.names   <- names(df)[grepl("owned\\.within",names(df))]  # whether or not each product was owned with X months
+window.feature.names <- names(df)[grepl("within",names(df))]  # whether or not each product was owned with X months
+# numeric.window.feature.names <- window.feature.names[grepl("transactions",window.feature.names)]
+# window.feature.names <- setdiff(window.feature.names,numeric.window.feature.names)
 # numeric features to use
 numeric.cols <- c("age",
                   "renta",
@@ -70,6 +75,7 @@ numeric.cols <- c("age",
                   "num.transactions",
                   # num.added.names,
                   num.purchases.names)
+                  # numeric.window.feature.names)
                   # total.products.names)
                   # total.products.names)
 #
@@ -89,14 +95,15 @@ categorical.cols <- c("sexo",
                       # ownership.names[grepl("1month",ownership.names)],
                       
                       ownership.names,
-                      owned.within.names,
                       "segmento.change",
                       "activity.index.change",
                       "ind_actividad_cliente",
                       "month",
-#                       "canal_entrada",
+                      window.feature.names,
+                      # "canal_entrada")
                       # ownership.names,
-                      "birthday.month")
+                      "birthday.month",
+                       "canal_entrada")
                       # added.products,
                       # dropped.products,
                       # "canal_entrada")
@@ -125,19 +132,22 @@ for (label in labels){
 # into xgboost is the raw feature data
 save.id       <- df$ncodpers
 save.month.id <- df$month.id
-save.month    <- df$month
+save.months        <- df$month
 save.id.test       <- test$ncodpers
 save.month.id.test <- test$month.id
+save.months.test   <- test$month
 df         <- cbind(ohe,data.matrix(df[,names(df) %in% numeric.cols]))
 test       <- cbind(ohe.test,data.matrix(test[,names(test) %in% numeric.cols]))
 
 save.id.val       <- val.train$ncodpers
 save.month.id.val <- val.train$month.id
+save.month.val    <- val.train$month
 save.id.test.val       <- val.test$ncodpers
 save.month.id.test.val <- val.test$month.id
-save.month.val    <- val.train$month
-val.train         <- cbind(ohe.val.train,data.matrix(val.train[,names(val.train) %in% numeric.cols]))
-val.test       <- cbind(ohe.val.test,data.matrix(val.test[,names(val.test) %in% numeric.cols]))
+save.month.test.val    <- val.test$month
+
+val.train   <- cbind(ohe.val.train,data.matrix(val.train[,names(val.train) %in% numeric.cols]))
+val.test    <- cbind(ohe.val.test,data.matrix(val.test[,names(val.test) %in% numeric.cols]))
 set.seed(1)
 
 # use a 75/25 train/test split so we can compute MAP@7 locally. The test set
@@ -159,7 +169,7 @@ predictions         <- list()
 predictions_val     <- list()
 predictions_val_future     <- list()
 # this function takes in training/testing data and returns predicted probabilities
-build.predictions.xgboost <- function(df, test, label, label.name,depth,eta,weights){
+build.predictions.xgboost <- function(df, test, label, label.name,depth,eta,weight){
   library(xgboost)
   # df:         training data
   # test:       the data to predict on
@@ -168,7 +178,7 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta,weig
   # depth:      XGBoost max tree depth
   # eta:        XGBoost learning rate
   set.seed(1)
-  dtrain <- xgb.DMatrix(data = df, label=label,weight=weights)
+  dtrain <- xgb.DMatrix(data = df, label=label, weight=weight)
   # model <- xgb.cv(data = dtrain,
                    # max.depth = depth, 
                    # eta = eta, nthread = 4,
@@ -199,7 +209,7 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta,weig
 label.count <- 1
 for (label in labels){
   # the syntax for indexing train.labels is messy but functional
-  # predictions_val <- c(predictions_val,build.predictions.xgboost(df[train.ind,],df[-train.ind,],train.labels[[label]][train.ind,1,drop=F],label,depth,eta) )
+  # predictions_val <- c(predictions_val,build.predictions.xgboost(df[train.ind,],df[-train.ind,],train.labels[[label]][train.ind,1,drop=F],label,depth,eta, weight=ifelse(=="")) )
   # accuracy <- mean(train.labels[[label]][-train.ind,1]==round(predictions_val[[label.count]]))
   # print(sprintf("Accuracy for label %s = %f",label,accuracy)) # accuracy not super useful for this task
   # if (accuracy < 1){ # perfect accuracy causes some error with pROC
@@ -209,9 +219,8 @@ for (label in labels){
   # }
   
   # now predict on the testing data
-downweight.factor <- 2
-predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta,ifelse(save.month=="Jun",1,downweight.factor)) )
-  predictions_val_future <- c(predictions_val_future,build.predictions.xgboost(val.train,val.test,train.labels.val[[label]],label,depth,eta,ifelse(save.month.val=="May",1,downweight.factor)) )
+  predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta,weight=ifelse(save.months=="Jun",1,2)) )
+  predictions_val_future <- c(predictions_val_future,build.predictions.xgboost(val.train,val.test,train.labels.val[[label]],label,depth,eta,weight=ifelse(save.month.val=="May",1,2)) )
   label.count <- label.count + 1
   
 }
