@@ -248,7 +248,7 @@ ids.train       <- purchased$ncodpers[purchased$month.id %in% train.month & (pur
 
 extra.train.ids.val <- purchased$ncodpers[purchased$month.id %in% extra.train.months.val & (purchased$products!="")]
 extra.train.ids.test <- purchased$ncodpers[purchased$month.id %in% extra.train.months.test & (purchased$products!="")]
-
+extra.train.ids.may <-  purchased$ncodpers[(purchased$month.id ==17 & (purchased$products!="") & purchased$ncodpers %in% intersect(extra.train.ids.test,ids.train))]
 
 df$birthday.month   <- factor(month.abb[df$birthday.month],levels=month.abb)
 test$birthday.month <- factor(month.abb[test$birthday.month],levels=month.abb)
@@ -261,8 +261,11 @@ df <- select(df,-fecha_alta,-fecha_dato,-month.previous.id)
 extra.train.val <- df %>% 
   filter(ncodpers %in% extra.train.ids.val & month.id %in% extra.train.months.val)
 
-extra.train.test <- df %>% 
-  filter(ncodpers %in% extra.train.ids.test & month.id %in% extra.train.months.test)
+extra.train.test <- rbind(df %>% 
+                            filter(ncodpers %in% extra.train.ids.test & month.id %in% extra.train.months.test),
+                          df %>% 
+                            filter(ncodpers %in% extra.train.ids.may & month.id ==17))
+
 
 val.train <- df %>% 
   filter(ncodpers %in% ids.val.train & month.id %in% val.train.month)
@@ -274,7 +277,7 @@ df <- df %>%
   filter(ncodpers %in% ids.train & month.id %in% train.month) 
 
 test <- test %>% 
-  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id) 
+  dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id)  
 
 # val.test <- rbind(val.test,extra.train)
 # df       <- rbind(df,extra.train)
