@@ -196,6 +196,8 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta,weig
 
 # loop over the labels and create predictions of the validation data and training data
 # for each
+purchased <- fread("purchased-products.csv")
+prod.list <- strsplit(purchased$products," ")
 label.count <- 1
 for (label in labels){
   # the syntax for indexing train.labels is messy but functional
@@ -207,11 +209,22 @@ for (label in labels){
   # } else {
     # print("auc perfect")
   # }
+  downweight.factor <- 2
   
   # now predict on the testing data
-downweight.factor <- 2
-predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta,ifelse(save.month=="Jun",1,downweight.factor)) )
-  predictions_val_future <- c(predictions_val_future,build.predictions.xgboost(val.train,val.test,train.labels.val[[label]],label,depth,eta,ifelse(save.month.val=="May",1,downweight.factor)) )
+  good.ids <- c()
+  for (row.num in 1:nrow(purchased)){
+    if (label %in% prod.list[[row.num]]){
+      good.ids <- append(purchased$ncodpers[row.num],good.ids)
+    }
+  }
+  
+my.weights <- ifelse(save.month=="Jun",1,downweight.factor)
+my.weights[save.id %in% good.ids] <- 3
+predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta,my.weights) )
+my.weights <- ifelse(save.month.val=="May",1,downweight.factor)
+my.weights[save.id.val %in% good.ids] <- 3
+predictions_val_future <- c(predictions_val_future,build.predictions.xgboost(val.train,val.test,train.labels.val[[label]],label,depth,eta,my.weights) )
   label.count <- label.count + 1
   
 }
