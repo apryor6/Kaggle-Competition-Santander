@@ -33,7 +33,8 @@ ownership.names <- names(df)[grepl("month\\_ago",names(df)) & !grepl("month\\.pr
 
 drop.names <- names(df)[grepl("dropped",names(df))] # various features indicating whether or not a product was owned X months ago
 add.names <- names(df)[grepl("added",names(df))] # various features indicating whether or not a product was owned X months ago
-
+last.owned.names <- names(df)[grepl("\\.last\\.owned",names(df))] # various features indicating whether or not a product was owned X months ago
+print(paste("last.owned.names = ",last.owned.names))
 purchased <- as.data.frame(fread("purchased-products.csv"))
 
 products.df <- df %>%
@@ -60,7 +61,8 @@ numeric.cols <- c("age",
                   "antiguedad",
                   purchase.w,
                   "total_products",
-                  "num.transactions")
+                  "num.transactions",
+                  last.owned.names)
 # categorical features. These will be one-hot encoded
 categorical.cols <- c("sexo",
                       "ind_nuevo",
