@@ -361,10 +361,11 @@ df[,features] <- lapply(df[,features],function(x)as.integer(round(x)))
 
 ```{r}
 source('~/kaggle/competition-santander/project/Santander/lib/create-lag-feature.R')
-df <- create.lag.feature(df,'ind_actividad_cliente',1:11,na.fill=0)
 df <- as.data.table(df)
+df <- create.lag.feature(df,'ind_actividad_cliente',1:11,na.fill=0)
 df[,last.age:=lag(age),by="ncodpers"]
-df$turned.adult <- ifelse[df$age==20 & df$last.age==19,1,0]
+df$turned.adult <- ifelse(df$age==20 & df$last.age==19,1,0)
+df <- as.data.frame(df)
 ```
 
 
