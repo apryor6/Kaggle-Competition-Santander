@@ -19,7 +19,7 @@ filenames.val <- list(paste(base,"xgboost_preds_val_future_singleclass_best.csv"
                       paste(base,"xgboost_preds_val_future_multiclass_4.csv",sep=""))
 
 weight.single.best  <- 1
-num.to.choose <- 5000
+num.to.choose <- 10000
 
 weight.single.best.vector  <- rep(1,num.to.choose)
 weight.multi.best.vector   <- seq(0,1.5,0.05)
@@ -42,7 +42,7 @@ for (run.num in 1:num.to.choose){
   weight.multi.other  <- weight.multi.other.samples[run.num]
   blend.weights <- c(weight.single.best,rep(weight.single.other,4),
                      weight.multi.best,rep(weight.multi.other,4))
-  
+  blend.weights <- runif(min=0,max=2,n=10)
   val.blended  <- as.data.frame(fread(filenames.val[[1]]))
   
   pred.names <-names(val.blended[grepl("pred",names(val.blended))])
@@ -83,8 +83,10 @@ for (run.num in 1:num.to.choose){
     best.weight.single.other <- weight.single.other
     best.weight.multi.other  <- weight.multi.other
     print(paste("New best MAP = " ,MAP))
-    print(paste("best.weight.multi.best = ",best.weight.multi.best))
-    print(paste("best.weight.single.other = ",best.weight.single.other))
-    print(paste("best.weight.multi.other = ",best.weight.multi.other))
+    print("weights =")
+    print(blend.weights)
+    # print(paste("best.weight.multi.best = ",best.weight.multi.best))
+    # # print(paste("best.weight.single.other = ",best.weight.single.other))
+    # print(paste("best.weight.multi.other = ",best.weight.multi.other))
   }
 }

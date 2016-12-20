@@ -8,7 +8,6 @@ source('project/Santander/lib/MAP.R')
 # val  <- fread("xgboost_preds_val_future.csv")
 # val  <- fread("xgboost_preds_val_future_multi.csv")
 
-test <- fread("combined_preds_test.csv")
 val  <- fread("combined_preds_val.csv")
 # val$products <- val$products.x
 # test <- fread("caret_preds_test.csv")
@@ -21,5 +20,6 @@ val <- val %>%
   merge(purchased,by=c("ncodpers","month.id"))
 MAP <- mapk(k=7,strsplit(val$products, " "),strsplit(val$added_products," "))
 print(paste("Validation MAP@7 = ",MAP))
+# test <- fread("combined_preds_test.csv")
 # test.recs <- get.recommendations(test,products)
 # write.csv(test.recs,"recommendations_xgboost.csv",row.names = FALSE)
