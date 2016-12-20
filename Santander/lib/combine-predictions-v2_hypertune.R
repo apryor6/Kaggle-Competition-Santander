@@ -2,14 +2,21 @@
 source('project/Santander/lib/get_recommendations.R')
 source('project/Santander/lib/MAP.R')
 source("project/Santander/lib/dataframe-correlation.R")
-filenames.val <- list("xgboost_preds_val_future_singleclass_best.csv",
-                      "xgboost_preds_val_future_singleclass_1.csv",
-                      "xgboost_preds_val_future_singleclass_2.csv",
-                      "xgboost_preds_val_future_singleclass_3.csv",
-                      "xgboost_preds_val_future_multiclass_best.csv",
-                      "xgboost_preds_val_future_multiclass_1.csv",
-                      "xgboost_preds_val_future_multiclass_2.csv",
-                      "xgboost_preds_val_future_multiclass_3.csv")
+library(data.table)
+library(dplyr)
+
+base <- "/u/project/miao/apryor/ml/"
+
+filenames.val <- list(paste(base,"xgboost_preds_val_future_singleclass_best.csv",sep=""),
+                      paste(base,"xgboost_preds_val_future_singleclass_1.csv",sep=""),
+                      paste(base,"xgboost_preds_val_future_singleclass_2.csv",sep=""),
+                      paste(base,"xgboost_preds_val_future_singleclass_3.csv",sep=""),
+                      paste(base,"xgboost_preds_val_future_multiclass_best.csv",sep=""),
+                      paste(base,"xgboost_preds_val_future_multiclass_1.csv",sep=""),
+                      paste(base,"xgboost_preds_val_future_multiclass_2.csv",sep=""),
+                      paste(base,"xgboost_preds_val_future_multiclass_3.csv",sep=""),
+                      paste(base,"xgboost_preds_val_future_multiclass_4.csv",sep=""))
+
 weight.single.best  <- 1
 num.to.choose <- 5000
 

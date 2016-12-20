@@ -1,6 +1,8 @@
 source("project/Santander/lib/dataframe-correlation.R")
 source('project/Santander/lib/get_recommendations.R')
 source('project/Santander/lib/MAP.R')
+library(data.table)
+library(dplyr)
 # weights <- list()
 # weights[['single.best']] <- 1
 # weights[['multi.best']] <- .1
