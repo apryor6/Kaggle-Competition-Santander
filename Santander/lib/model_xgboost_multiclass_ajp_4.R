@@ -15,7 +15,11 @@ source('project/Santander/lib/MAP.R')
 set.seed(1)
 use.resampling.weights <- FALSE
 use.many.seeds         <- TRUE
-rand.seeds <- ifelse(use.many.seeds,1:10,1)
+if (use.many.seeds){
+  rand.seeds <- 1:10
+} else{
+  rand.seeds <- 1
+}
 # read data
 # df   <- as.data.frame(fread("train_prepped.csv", stringsAsFactors = TRUE))
 # test <- as.data.frame(fread("test_prepped.csv" , stringsAsFactors = TRUE))
