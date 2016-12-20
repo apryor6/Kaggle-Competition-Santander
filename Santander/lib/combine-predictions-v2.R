@@ -9,25 +9,27 @@ weight.single.best  <- 1
 weight.multi.best   <- .1
 weight.single.other <- 0.5
 weight.multi.other  <- 0.05
+base <- "/u/project/miao/apryor/ml/"
+filenames.test <- list(paste(base,"xgboost_preds_test_singleclass_best.csv",sep=""),
+                        paste(base,"xgboost_preds_test_singleclass_1.csv",sep=""),
+                        paste(base,"xgboost_preds_test_singleclass_2.csv",sep=""),
+                        paste(base,"xgboost_preds_test_singleclass_3.csv",sep=""),
+                        paste(base,"xgboost_preds_test_multiclass_best.csv",sep=""),
+                        paste(base,"xgboost_preds_test_multiclass_1.csv",sep=""),
+                        paste(base,"xgboost_preds_test_multiclass_2.csv",sep=""),
+                        paste(base,"xgboost_preds_test_multiclass_3.csv",sep=""),
+                        paste(base,"xgboost_preds_test_multiclass_4.csv",sep=""))
 
-filenames.test <- list("xgboost_preds_test_singleclass_best.csv",
-                      "xgboost_preds_test_singleclass_1.csv",
-                      "xgboost_preds_test_singleclass_2.csv",
-                      "xgboost_preds_test_singleclass_3.csv",
-                      "xgboost_preds_test_multiclass_best.csv",
-                      "xgboost_preds_test_multiclass_1.csv",
-                      "xgboost_preds_test_multiclass_2.csv",
-                      "xgboost_preds_test_multiclass_3.csv")
 
-
-filenames.val <- list("xgboost_preds_val_future_singleclass_best.csv",
-                      "xgboost_preds_val_future_singleclass_1.csv",
-                      "xgboost_preds_val_future_singleclass_2.csv",
-                      "xgboost_preds_val_future_singleclass_3.csv",
-                      "xgboost_preds_val_future_multiclass_best.csv",
-                      "xgboost_preds_val_future_multiclass_1.csv",
-                      "xgboost_preds_val_future_multiclass_2.csv",
-                      "xgboost_preds_val_future_multiclass_3.csv")
+filenames.val <- list(paste(base,"xgboost_preds_val_future_singleclass_best.csv",sep=""),
+                      paste(base,"xgboost_preds_val_future_singleclass_1.csv",sep=""),
+                      paste(base,"xgboost_preds_val_future_singleclass_2.csv",sep=""),
+                      paste(base,"xgboost_preds_val_future_singleclass_3.csv",sep=""),
+                      paste(base,"xgboost_preds_val_future_multiclass_best.csv",sep=""),
+                      paste(base,"xgboost_preds_val_future_multiclass_1.csv",sep=""),
+                      paste(base,"xgboost_preds_val_future_multiclass_2.csv",sep=""),
+                      paste(base,"xgboost_preds_val_future_multiclass_3.csv",sep=""),
+                      paste(base,"xgboost_preds_val_future_multiclass_4.csv",sep=""))
 
 blend.weights <- c(weight.single.best,rep(weight.single.other,3),
                   weight.multi.best,rep(weight.multi.best,3))
