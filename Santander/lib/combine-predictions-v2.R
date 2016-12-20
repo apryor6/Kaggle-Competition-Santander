@@ -7,10 +7,10 @@ library(dplyr)
 # weights[['single.best']] <- 1
 # weights[['multi.best']] <- .1
 
-weight.single.best  <- 1
-weight.multi.best   <- .05
-weight.single.other <- .1
-weight.multi.other  <- .05
+weight.single.best  <- .05
+weight.multi.best   <- .0
+weight.single.other <- .0
+weight.multi.other  <- .0
 base <- "~/kaggle/competition-santander/"
 filenames.test <- list(paste(base,"xgboost_preds_test_singleclass_best.csv",sep=""),
                         paste(base,"xgboost_preds_test_singleclass_1.csv",sep=""),
@@ -37,7 +37,9 @@ filenames.val <- list(paste(base,"xgboost_preds_val_future_singleclass_best.csv"
 
 blend.weights <- c(weight.single.best,rep(weight.single.other,4),
                   weight.multi.best,rep(weight.multi.best,4))
-
+blend.weights <- rep(0,10)
+blend.weights[7] <- 1
+blend.weights[5] <- 1
 test.xgboost <- as.data.frame(fread(filenames.test[[1]]))
 val.xgboost  <- as.data.frame(fread(filenames.val[[1]]))
 

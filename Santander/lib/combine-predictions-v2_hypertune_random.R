@@ -4,6 +4,7 @@ source('project/Santander/lib/MAP.R')
 source("project/Santander/lib/dataframe-correlation.R")
 library(data.table)
 library(dplyr)
+library(lubridate)
 set.seed(round(second(Sys.time())*100))
 base <- ""
 
@@ -20,6 +21,7 @@ filenames.val <- list(paste(base,"xgboost_preds_val_future_singleclass_best.csv"
 
 weight.single.best  <- 1
 num.to.choose <- 10000
+models.to.use <- c(1,5,6)
 
 weight.single.best.vector  <- rep(1,num.to.choose)
 weight.multi.best.vector   <- seq(0,1.5,0.05)
@@ -42,7 +44,8 @@ for (run.num in 1:num.to.choose){
   weight.multi.other  <- weight.multi.other.samples[run.num]
   blend.weights <- c(weight.single.best,rep(weight.single.other,4),
                      weight.multi.best,rep(weight.multi.other,4))
-  blend.weights <- runif(min=0,max=2,n=10)
+  blend.weights <- rep(0,10)
+  blend.weights[models.to.use] <- runif(min=0,max=2,n=3)
   val.blended  <- as.data.frame(fread(filenames.val[[1]]))
   
   pred.names <-names(val.blended[grepl("pred",names(val.blended))])
