@@ -187,7 +187,7 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta,weig
     model <- xgboost(data = dtrain,
                      max.depth = depth,
                      eta = eta, nthread = 4,
-                     nround = 10, 
+                     nround = 80, 
                      subsample=0.75,
                      # colsample_bytree=0.5,
                      objective = "binary:logistic", 

@@ -167,6 +167,7 @@ predictions_val_future     <- list()
 # this function takes in training/testing data and returns predicted probabilities
 build.predictions.xgboost <- function(df, test, label, label.name,depth,eta,weights,rand.seeds=0){
   for (rand.seed.num in 1:length(rand.seeds)){
+    print(paste("using seed = ",rand.seeds[rand.seed.num]))
     set.seed(rand.seeds[rand.seed.num])
     library(xgboost)
     # df:         training data
@@ -187,7 +188,7 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta,weig
     model <- xgboost(data = dtrain,
                      max.depth = depth,
                      eta = eta, nthread = 4,
-                     nround = 10, 
+                     nround = 80, 
                      subsample=0.75,
                      # colsample_bytree=0.5,
                      objective = "binary:logistic", 
