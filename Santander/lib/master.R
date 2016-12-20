@@ -18,8 +18,8 @@ source("project/Santander/munge/feature-purchase-frequency.R")
 source("project/Santander/lib/engineer-features.R")
 
 # Build models and make predictions
-source("project/Santander/lib/model_xgboost_ajp.R")
-source("project/Santander/lib/model_xgboost_multiclass_ajp.R")
+source("project/Santander/lib/model_xgboost_multiclass_ajp_best.R")
+source("project/Santander/lib/model_xgboost_singleclass_ajp_best.R")
 
 # Combine predictions from various models
 source("project/Santander/lib/combine-predictions.R")

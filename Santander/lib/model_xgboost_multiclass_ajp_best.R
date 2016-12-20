@@ -11,9 +11,11 @@ library(lubridate)
 source('project/Santander/lib/get_recommendations.R')
 source('project/Santander/lib/MAP.R')
 
-rand.seeds <- 1:10
+
 set.seed(1)
-use.resampling.weights = FALSE
+use.resampling.weights <- FALSE
+use.many.seeds         <- TRUE
+rand.seeds <- ifelse(use.many.seeds,1:10,1)
 # read data
 # df   <- as.data.frame(fread("train_prepped.csv", stringsAsFactors = TRUE))
 # test <- as.data.frame(fread("test_prepped.csv" , stringsAsFactors = TRUE))
@@ -406,9 +408,9 @@ print(paste("Validation future MAP@7 = ",MAP))
 # }
 # }
 
-write.csv(test,"xgboost_preds_test.csv",row.names = FALSE)
+write.csv(test,"xgboost_preds_test_multiclass_best.csv",row.names = FALSE)
 # write.csv(val,"xgboost_preds_val.csv",row.names = FALSE)
-write.csv(val_future,"xgboost_preds_val_future.csv",row.names = FALSE)
+write.csv(val_future,"xgboost_preds_val_future_multiclass_best.csv",row.names = FALSE)
 # save.image(file="saved.workspace.RData")
 
 # }

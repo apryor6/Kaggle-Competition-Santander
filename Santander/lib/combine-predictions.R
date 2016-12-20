@@ -6,11 +6,11 @@ weights[['multi']] <- .1
 
 
 
-test.xgboost <- as.data.frame(fread("xgboost_preds_test.csv"))
-val.xgboost  <- as.data.frame(fread("xgboost_preds_val_future.csv"))
+test.xgboost <- as.data.frame(fread("xgboost_preds_test_singleclass_best.csv"))
+val.xgboost  <- as.data.frame(fread("xgboost_preds_val_future_singleclass_best.csv"))
 
-test.xgboost.multi <- as.data.frame(fread("xgboost_preds_test_multi.csv"))
-val.xgboost.multi  <- as.data.frame(fread("xgboost_preds_val_future_multi.csv"))
+test.xgboost.multi <- as.data.frame(fread("xgboost_preds_test_multiclass_best.csv"))
+val.xgboost.multi  <- as.data.frame(fread("xgboost_preds_val_future_multiclass_best.csv"))
 
 pred.names <-names(test.xgboost[grepl("pred",names(test.xgboost))])
 product.names <- gsub("\\_pred","",pred.names)

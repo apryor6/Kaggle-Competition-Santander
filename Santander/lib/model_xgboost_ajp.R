@@ -11,8 +11,9 @@ library(lubridate)
 source('project/Santander/lib/get_recommendations.R')
 source('project/Santander/lib/MAP.R')
 
-set.seed(1)
+rand.seeds <- 11:20
 
+set.seed(1)
 # read data
 # df   <- as.data.frame(fread("train_prepped.csv", stringsAsFactors = TRUE))
 # test <- as.data.frame(fread("test_prepped.csv" , stringsAsFactors = TRUE))
@@ -159,37 +160,44 @@ predictions         <- list()
 predictions_val     <- list()
 predictions_val_future     <- list()
 # this function takes in training/testing data and returns predicted probabilities
-build.predictions.xgboost <- function(df, test, label, label.name,depth,eta,weights){
-  library(xgboost)
-  # df:         training data
-  # test:       the data to predict on
-  # label:      vector containing the target label
-  # label.name: name of the label
-  # depth:      XGBoost max tree depth
-  # eta:        XGBoost learning rate
-  set.seed(1)
-  dtrain <- xgb.DMatrix(data = df, label=label,weight=weights)
-  # model <- xgb.cv(data = dtrain,
-                   # max.depth = depth, 
-                   # eta = eta, nthread = 4,
-                   # nround = 100, 
-                   # objective = "binary:logistic", 
-                   # verbose =1 ,
-                   # print.every.n = 10,
-                  # nfold=5)
-  model <- xgboost(data = dtrain,
-                   max.depth = depth,
-                   eta = eta, nthread = 4,
-                   nround = 10, 
-                   subsample=0.75,
-                   # colsample_bytree=0.5,
-                   objective = "binary:logistic", 
-                   verbose =1 ,
-                   print.every.n = 10)
+build.predictions.xgboost <- function(df, test, label, label.name,depth,eta,weights,rand.seeds=0){
+  for (rand.seed.num in 1:length(rand.seeds)){
+    set.seed(rand.seeds[rand.seed.num])
+    library(xgboost)
+    # df:         training data
+    # test:       the data to predict on
+    # label:      vector containing the target label
+    # label.name: name of the label
+    # depth:      XGBoost max tree depth
+    # eta:        XGBoost learning rate
+    dtrain <- xgb.DMatrix(data = df, label=label,weight=weights)
+    # model <- xgb.cv(data = dtrain,
+                     # max.depth = depth, 
+                     # eta = eta, nthread = 4,
+                     # nround = 100, 
+                     # objective = "binary:logistic", 
+                     # verbose =1 ,
+                     # print.every.n = 10,
+                    # nfold=5)
+    model <- xgboost(data = dtrain,
+                     max.depth = depth,
+                     eta = eta, nthread = 4,
+                     nround = 10, 
+                     subsample=0.75,
+                     # colsample_bytree=0.5,
+                     objective = "binary:logistic", 
+                     verbose =1 ,
+                     print.every.n = 10)
+    if (rand.seed.num == 1 ) { # initialize predictions on first time
+      preds <- predict(model,test)
+    } else {
+      preds <- predict(model,test) + preds
+    }
+  }
   imp <- xgb.importance(feature_names = colnames(df),model=model)
   save(imp,file=paste("IMPORTANCE_",gsub("\\_target","",label.name),".RData",sep=""))
   print(imp)
-  predictions        <- list(predict(model,test))
+  predictions        <- list(preds / length(rand.seeds))
   names(predictions) <- paste(gsub("_target","",label.name),"_pred",sep="")
   return(predictions)
 }
