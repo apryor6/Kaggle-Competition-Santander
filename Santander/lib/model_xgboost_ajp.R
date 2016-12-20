@@ -62,7 +62,7 @@ num.purchases.names  <- names(df)[grepl("num\\.purchases",names(df))]  # total n
 total.products.names <- names(df)[grepl("total\\.products",names(df))]  # total number of products owned X months ago
 owned.within.names   <- names(df)[grepl("owned\\.within",names(df))]  # whether or not each product was owned with X months
 lagged.names         <- names(df)[grepl("lagged",names(df))]  # whether or not each product was owned with X months
-
+last.owned.names     <- names(df)[grepl("last\\.owned",names(df))]  
 print("table turned.adult")
 table(df$turned.adult)
 # numeric features to use
@@ -73,7 +73,8 @@ numeric.cols <- c("age",
                   "total_products",
                   "num.transactions",
                   # num.added.names,
-                  num.purchases.names)
+                  num.purchases.names,
+                  last.owned.names)
                   # total.products.names)
                   # total.products.names)
 #

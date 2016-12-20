@@ -11,6 +11,7 @@ library(lubridate)
 library(fasttime)
 source('project/Santander/lib/get_recommendations.R')
 source('project/Santander/lib/MAP.R')
+source("project/Santander/lib/months-since-owned.R")
 
 set.seed(1)
 val.train.month <- 5

@@ -4,14 +4,18 @@
 source('project/Santander/lib/get_recommendations.R')
 source('project/Santander/lib/MAP.R')
 # 
-test <- fread("xgboost_preds_test.csv")
-val  <- fread("xgboost_preds_val_future.csv")
-val$products <- val$products.x
+# test <- fread("xgboost_preds_test.csv")
+# val  <- fread("xgboost_preds_val_future.csv")
+# val  <- fread("xgboost_preds_val_future_multi.csv")
+
+test <- fread("combined_preds_test.csv")
+val  <- fread("combined_preds_val.csv")
+# val$products <- val$products.x
 # test <- fread("caret_preds_test.csv")
 # val  <- fread("caret_preds_val.csv")
 load("project/Santander/lib/products.Rdata")
-# val.recs  <- get.recommendations(val,products)
-# val$added_products <- val.recs$added_products
+val.recs  <- get.recommendations(val,products)
+val$added_products <- val.recs$added_products
 purchased <- as.data.frame(fread("purchased-products.csv"))
 val <- val %>%
   merge(purchased,by=c("ncodpers","month.id"))
