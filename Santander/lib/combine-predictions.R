@@ -2,7 +2,7 @@ source("project/Santander/lib/dataframe-correlation.R")
 
 weights <- list()
 weights[['single']] <- 1
-weights[['multi']] <- .2
+weights[['multi']] <- .1
 
 
 
