@@ -14,12 +14,12 @@ source('project/Santander/lib/MAP.R')
 
 set.seed(1)
 use.many.seeds         <- TRUE
-rand.seeds <- ifelse(use.many.seeds,101:110,1)
+rand.seeds <- ifelse(use.many.seeds,111:120,1)
 # read data
 # df   <- as.data.frame(fread("train_prepped.csv", stringsAsFactors = TRUE))
 # test <- as.data.frame(fread("test_prepped.csv" , stringsAsFactors = TRUE))
 load("data_prepped.RData")
-use.extra.train.FLAG = TRUE
+use.extra.train.FLAG = FALSE
 if (use.extra.train.FLAG){
   val.train <- rbind(val.train,extra.train.val)
   df       <- rbind(df,extra.train.test)
@@ -72,8 +72,8 @@ numeric.cols <- c("age",
                   "num.transactions",
                   # num.added.names,
                   num.purchases.names)
-                  # total.products.names)
-                  # total.products.names)
+# total.products.names)
+# total.products.names)
 #
 # clust <- kmeans(rbind(df[,names(df) %in% numeric.cols],test[,names(test) %in% numeric.cols]),centers = 10)
 # df[["clust"]] <- as.factor(clust$cluster[1:nrow(df)])
@@ -96,13 +96,13 @@ categorical.cols <- c("sexo",
                       "activity.index.change",
                       "ind_actividad_cliente",
                       "month",
-#                       "canal_entrada",
+                      #                       "canal_entrada",
                       # ownership.names,
                       "birthday.month")
-                      # added.products,
-                      # dropped.products,
-                      # "canal_entrada")
-            #canal entrada?
+# added.products,
+# dropped.products,
+# "canal_entrada")
+#canal entrada?
 
 
 # one-hot encode the categorical features
@@ -153,7 +153,7 @@ train.ind  <- createDataPartition(1:nrow(df),p=0.75)[[1]]
 test.save <- test
 best.map <- 0
 # for (depth in c(3,5,7,9,11,15)){
-  # for (eta in c(0.01,0.025, 0.05,0.1,0.25,0.5)){
+# for (eta in c(0.01,0.025, 0.05,0.1,0.25,0.5)){
 depth <- 7
 eta <- 0.05
 test <- test.save
@@ -173,13 +173,13 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta,weig
     # eta:        XGBoost learning rate
     dtrain <- xgb.DMatrix(data = df, label=label,weight=weights)
     # model <- xgb.cv(data = dtrain,
-                     # max.depth = depth, 
-                     # eta = eta, nthread = 4,
-                     # nround = 100, 
-                     # objective = "binary:logistic", 
-                     # verbose =1 ,
-                     # print.every.n = 10,
-                    # nfold=5)
+    # max.depth = depth, 
+    # eta = eta, nthread = 4,
+    # nround = 100, 
+    # objective = "binary:logistic", 
+    # verbose =1 ,
+    # print.every.n = 10,
+    # nfold=5)
     model <- xgboost(data = dtrain,
                      max.depth = depth,
                      eta = eta, nthread = 4,
@@ -214,12 +214,12 @@ for (label in labels){
   # if (accuracy < 1){ # perfect accuracy causes some error with pROC
   # print(pROC::auc(roc(train.labels[[label]][-train.ind,1],predictions_val[[label.count]])))
   # } else {
-    # print("auc perfect")
+  # print("auc perfect")
   # }
   
   # now predict on the testing data
-downweight.factor <- 2
-# predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta,ifelse(save.month=="Jun",1,downweight.factor)) )
+  downweight.factor <- 2
+  # predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta,ifelse(save.month=="Jun",1,downweight.factor)) )
   predictions_val_future <- c(predictions_val_future,build.predictions.xgboost(val.train,val.test,train.labels.val[[label]],label,depth,eta,ifelse(save.month.val=="May",1,downweight.factor)) )
   label.count <- label.count + 1
   
@@ -289,19 +289,19 @@ MAP <- mapk(k=7,strsplit(val_future$products, " "),strsplit(val_future$added_pro
 print(paste("Validation future MAP@7 = ",MAP))
 
 # if (MAP > best.map){
-  # best.map <- MAP
-  # out.recs <- test.recs
-  # best.depth <- depth
-  # best.eta <- eta
-  
+# best.map <- MAP
+# out.recs <- test.recs
+# best.depth <- depth
+# best.eta <- eta
+
 # }
-  # }
+# }
 # }
 
-  write.csv(test,"xgboost_preds_test_singleclass_best.csv",row.names = FALSE)
-  # write.csv(val,"xgboost_preds_val.csv",row.names = FALSE)
-  write.csv(val_future,"xgboost_preds_val_future_singleclass_best.csv",row.names = FALSE)
-  # save.image(file="saved.workspace.RData")
-  
+write.csv(test,"xgboost_preds_test_singleclass_1.csv",row.names = FALSE)
+# write.csv(val,"xgboost_preds_val.csv",row.names = FALSE)
+write.csv(val_future,"xgboost_preds_val_future_singleclass_1.csv",row.names = FALSE)
+# save.image(file="saved.workspace.RData")
+
 # }
 # write.csv(out.recs,"recommendations_xgboost.csv",row.names = FALSE)

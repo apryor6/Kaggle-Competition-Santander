@@ -1,0 +1,14 @@
+# Model descriptions
+All models use different random seeds
+
+Multiclass:
+best : the best multiclass model. trained June/Dec 2015 with all features
+1 : uses resampling weights to match product distribution in June
+2 : only trained on June
+3 : like best but uses fewer features
+
+Singleclass:
+best : the best single model. trained June/Dec 2015 with all features
+1 : only trained on June
+2 : trained June/Dec but with different features
+3 : trained June/Dec but with different features again
