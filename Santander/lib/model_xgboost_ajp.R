@@ -180,7 +180,7 @@ build.predictions.xgboost <- function(df, test, label, label.name,depth,eta,weig
   model <- xgboost(data = dtrain,
                    max.depth = depth,
                    eta = eta, nthread = 4,
-                   nround = 80, 
+                   nround = 10, 
                    subsample=0.75,
                    # colsample_bytree=0.5,
                    objective = "binary:logistic", 
@@ -210,7 +210,7 @@ for (label in labels){
   
   # now predict on the testing data
 downweight.factor <- 2
-predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta,ifelse(save.month=="Jun",1,downweight.factor)) )
+# predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta,ifelse(save.month=="Jun",1,downweight.factor)) )
   predictions_val_future <- c(predictions_val_future,build.predictions.xgboost(val.train,val.test,train.labels.val[[label]],label,depth,eta,ifelse(save.month.val=="May",1,downweight.factor)) )
   label.count <- label.count + 1
   
