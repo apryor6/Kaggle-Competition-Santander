@@ -219,8 +219,8 @@ for (label in labels){
   
   # now predict on the testing data
 downweight.factor <- 2
-predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta,ifelse(save.month=="Jun",1,downweight.factor)) )
-  predictions_val_future <- c(predictions_val_future,build.predictions.xgboost(val.train,val.test,train.labels.val[[label]],label,depth,eta,ifelse(save.month.val=="May",1,downweight.factor)) )
+predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta,ifelse(save.month=="Jun",1,downweight.factor),rand.seeds) )
+  predictions_val_future <- c(predictions_val_future,build.predictions.xgboost(val.train,val.test,train.labels.val[[label]],label,depth,eta,ifelse(save.month.val=="May",1,downweight.factor),rand.seeds) )
   label.count <- label.count + 1
   
 }
@@ -298,9 +298,9 @@ print(paste("Validation future MAP@7 = ",MAP))
   # }
 # }
 
-  write.csv(test,"xgboost_preds_test_singleclass_best.csv",row.names = FALSE)
+  write.csv(test,"/u/project/miao/apryor/ml/xgboost_preds_test_singleclass_best.csv",row.names = FALSE)
   # write.csv(val,"xgboost_preds_val.csv",row.names = FALSE)
-  write.csv(val_future,"xgboost_preds_val_future_singleclass_best.csv",row.names = FALSE)
+  write.csv(val_future,"/u/project/miao/apryor/ml/xgboost_preds_val_future_singleclass_best.csv",row.names = FALSE)
   # save.image(file="saved.workspace.RData")
   
 # }
