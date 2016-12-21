@@ -2,15 +2,15 @@
 All models use different random seeds
 
 Multiclass:
-best : the best multiclass model. trained June/Dec 2015 with all features
-1 : uses resampling weights to match product distribution in June
-2 : only trained on June
-3 : like best but uses fewer features
-4 : like best but weight factor 2 on December
+best : the best multiclass model. trained June/Dec 2015 with all features - localCV = 0.889510333190718
+1 : uses resampling weights to match product distribution in June - localCV = 0.892126672723806
+2 : only trained on June - localCV = 0.878710356853087
+3 : like best but uses fewer features - localCV = 0.888728094281986
+4 : like best but weight factor 2 on December - localCV = 0.889510333190718
 
 Singleclass:
-best : the best single model. trained June/Dec 2015 with all features
-1 : only trained on June
-2 : trained June/Dec but with different features
-3 : trained June/Dec but with different features again
-4 : like best but weight factor 1 on December
+best : the best single model. trained June/Dec 2015 with all features - localCV = 0.892664376010525
+1 : only trained on June - localCV = 0.889027121454183
+2 : trained June/Dec but with different features - localCV =  0.89271180757527
+3 : trained June/Dec but with different features again - localCV =  0.893270069881437
+4 : like best but weight factor 1 on December - localCV = 0.892862648497386

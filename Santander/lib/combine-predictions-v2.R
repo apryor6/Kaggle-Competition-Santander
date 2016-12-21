@@ -1,3 +1,4 @@
+rm(list=ls())
 source("project/Santander/lib/dataframe-correlation.R")
 source('project/Santander/lib/get_recommendations.R')
 source('project/Santander/lib/MAP.R')
@@ -6,7 +7,7 @@ library(dplyr)
 # weights <- list()
 # weights[['single.best']] <- 1
 # weights[['multi.best']] <- .1
-
+model.to.use <- 5
 weight.single.best  <- .05
 weight.multi.best   <- .0
 weight.single.other <- .0
@@ -38,8 +39,11 @@ filenames.val <- list(paste(base,"xgboost_preds_val_future_singleclass_best.csv"
 blend.weights <- c(weight.single.best,rep(weight.single.other,4),
                   weight.multi.best,rep(weight.multi.best,4))
 blend.weights <- rep(0,10)
-blend.weights[7] <- 1
-blend.weights[5] <- 1
+blend.weights[model.to.use] <- 1
+blend.weights <- c(1.000000000, rep(0.05,9))
+
+# blend.weights[7] <- 1
+# blend.weights[5] <- 1
 test.xgboost <- as.data.frame(fread(filenames.test[[1]]))
 val.xgboost  <- as.data.frame(fread(filenames.val[[1]]))
 
@@ -47,7 +51,7 @@ pred.names <-names(val.xgboost[grepl("pred",names(val.xgboost))])
 product.names <- gsub("\\_pred","",pred.names)
 
 test.xgboost <- test.xgboost %>%
-  select(ncodpers,month.id,one_of(pred.names),one_of(product.names))
+select(ncodpers,month.id,one_of(pred.names),one_of(product.names))
 
 val.xgboost <- val.xgboost %>% 
   dplyr::select(ncodpers,month.id,one_of(pred.names),one_of(product.names))

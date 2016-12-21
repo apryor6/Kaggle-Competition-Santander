@@ -21,7 +21,7 @@ filenames.val <- list(paste(base,"xgboost_preds_val_future_singleclass_best.csv"
 
 weight.single.best  <- 1
 num.to.choose <- 10000
-models.to.use <- c(1,5,6)
+models.to.use <- c(1,3,4,5,7)
 
 weight.single.best.vector  <- rep(1,num.to.choose)
 weight.multi.best.vector   <- seq(0,1.5,0.05)
