@@ -11,9 +11,15 @@ library(lubridate)
 source('project/Santander/lib/get_recommendations.R')
 source('project/Santander/lib/MAP.R')
 
-rand.seeds <- 1:10
+
 set.seed(1)
-use.resampling.weights = FALSE
+use.resampling.weights <- FALSE
+use.many.seeds         <- TRUE
+if (use.many.seeds){
+  rand.seeds <- 1:10
+} else{
+  rand.seeds <- 1
+}
 # read data
 # df   <- as.data.frame(fread("train_prepped.csv", stringsAsFactors = TRUE))
 # test <- as.data.frame(fread("test_prepped.csv" , stringsAsFactors = TRUE))
@@ -76,7 +82,7 @@ june.fractions  <- table(products.df$products[products.df$month.id==6])
 june.fractions  <- june.fractions / sum(june.fractions)
 total.fractions <- table(products.df$products)
 total.fractions <- total.fractions / sum(total.fractions)
-prod.weights.df     <- 1/(june.fractions / total.fractions)
+prod.weights.df     <- (june.fractions / total.fractions)
 
 
 
@@ -84,7 +90,7 @@ may.fractions   <- table(products.val$products[products.val$month.id==5])
 may.fractions   <- may.fractions / sum(may.fractions)
 total.fractions <- table(products.val$products)
 total.fractions <- total.fractions / sum(total.fractions)
-prod.weights.val     <- 1/(may.fractions / total.fractions)
+prod.weights.val     <- (may.fractions / total.fractions)
 
 
 if (use.resampling.weights){
@@ -311,8 +317,8 @@ for (label in c("products")){
   # predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta,ifelse(save.month=="Jun",1,downweight.factor)) )
   # predictions_val_future <- c(predictions_val_future,build.predictions.xgboost(val.train,val.test,train.labels.val[[label]],label,depth,eta,ifelse(save.month.val=="May",1,downweight.factor)) )
   
-  predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta,weights=df.weights))
-  predictions_val_future <- c(predictions_val_future,build.predictions.xgboost(val.train,val.test,train.labels.val[[label]],label,depth,eta,weights=val.weights))
+  predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta,weights=df.weights,rand.seeds))
+  predictions_val_future <- c(predictions_val_future,build.predictions.xgboost(val.train,val.test,train.labels.val[[label]],label,depth,eta,weights=val.weights,rand.seeds))
   label.count <- label.count + 1
 }
 
@@ -406,9 +412,9 @@ print(paste("Validation future MAP@7 = ",MAP))
 # }
 # }
 
-write.csv(test,"xgboost_preds_test.csv",row.names = FALSE)
+write.csv(test,"/u/project/miao/apryor/ml/xgboost_preds_test_multiclass_best.csv",row.names = FALSE)
 # write.csv(val,"xgboost_preds_val.csv",row.names = FALSE)
-write.csv(val_future,"xgboost_preds_val_future.csv",row.names = FALSE)
+write.csv(val_future,"/u/project/miao/apryor/ml/xgboost_preds_val_future_multiclass_best.csv",row.names = FALSE)
 # save.image(file="saved.workspace.RData")
 
 # }

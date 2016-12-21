@@ -11,14 +11,20 @@ library(lubridate)
 source('project/Santander/lib/get_recommendations.R')
 source('project/Santander/lib/MAP.R')
 
-rand.seeds <- 1:10
+
 set.seed(1)
-use.resampling.weights = FALSE
+use.resampling.weights <- TRUE
+use.many.seeds         <- TRUE
+if (use.many.seeds){
+  rand.seeds <- 31:40
+} else{
+  rand.seeds <- 1
+}
 # read data
 # df   <- as.data.frame(fread("train_prepped.csv", stringsAsFactors = TRUE))
 # test <- as.data.frame(fread("test_prepped.csv" , stringsAsFactors = TRUE))
 load("data_prepped.RData")
-use.extra.train.FLAG = TRUE
+use.extra.train.FLAG = FALSE
 if (use.extra.train.FLAG){
   val.train <- rbind(val.train,extra.train.val)
   df       <- rbind(df,extra.train.test)
@@ -76,7 +82,7 @@ june.fractions  <- table(products.df$products[products.df$month.id==6])
 june.fractions  <- june.fractions / sum(june.fractions)
 total.fractions <- table(products.df$products)
 total.fractions <- total.fractions / sum(total.fractions)
-prod.weights.df     <- 1/(june.fractions / total.fractions)
+prod.weights.df     <- (june.fractions / total.fractions)
 
 
 
@@ -84,7 +90,7 @@ may.fractions   <- table(products.val$products[products.val$month.id==5])
 may.fractions   <- may.fractions / sum(may.fractions)
 total.fractions <- table(products.val$products)
 total.fractions <- total.fractions / sum(total.fractions)
-prod.weights.val     <- 1/(may.fractions / total.fractions)
+prod.weights.val     <- (may.fractions / total.fractions)
 
 
 if (use.resampling.weights){
@@ -93,7 +99,7 @@ if (use.resampling.weights){
 } else {
   df.weights <- rep(1,nrow(df))
   val.weights <- rep(1,nrow(val.train))
-                    
+  
 }
 
 # product.names.save   <- levels(products.df$products)
@@ -149,7 +155,7 @@ categorical.cols <- c("sexo",
                       "indrel",
                       "tiprel_1mes",
                       # ownership.names[grepl("1month",ownership.names)],
-
+                      
                       ownership.names,
                       owned.within.names,
                       "segmento.change",
@@ -179,8 +185,8 @@ ohe.val.test <- as(data.matrix(predict(ohe.val.test,val.test[,names(val.test) %i
 # train.labels.val        <- list()
 # convert labels into XGBoost's sparse matrix representation
 # for (label in labels){
-  # train.labels[[label]]     <- as(data.matrix(df[[label]]),'dgCMatrix')
-  # train.labels.val[[label]] <- as(data.matrix(val.train[[label]]),'dgCMatrix')
+# train.labels[[label]]     <- as(data.matrix(df[[label]]),'dgCMatrix')
+# train.labels.val[[label]] <- as(data.matrix(val.train[[label]]),'dgCMatrix')
 # }
 
 # remember the id's for people and months for later since all that actually goes
@@ -311,8 +317,8 @@ for (label in c("products")){
   # predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta,ifelse(save.month=="Jun",1,downweight.factor)) )
   # predictions_val_future <- c(predictions_val_future,build.predictions.xgboost(val.train,val.test,train.labels.val[[label]],label,depth,eta,ifelse(save.month.val=="May",1,downweight.factor)) )
   
-  predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta,weights=df.weights))
-  predictions_val_future <- c(predictions_val_future,build.predictions.xgboost(val.train,val.test,train.labels.val[[label]],label,depth,eta,weights=val.weights))
+  predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[label]],label,depth,eta,weights=df.weights,rand.seeds))
+  predictions_val_future <- c(predictions_val_future,build.predictions.xgboost(val.train,val.test,train.labels.val[[label]],label,depth,eta,weights=val.weights,rand.seeds))
   label.count <- label.count + 1
 }
 
@@ -406,9 +412,9 @@ print(paste("Validation future MAP@7 = ",MAP))
 # }
 # }
 
-write.csv(test,"xgboost_preds_test.csv",row.names = FALSE)
+write.csv(test,"/u/project/miao/apryor/ml/xgboost_preds_test_multiclass_2.csv",row.names = FALSE)
 # write.csv(val,"xgboost_preds_val.csv",row.names = FALSE)
-write.csv(val_future,"xgboost_preds_val_future.csv",row.names = FALSE)
+write.csv(val_future,"/u/project/miao/apryor/ml/xgboost_preds_val_future_multiclass_2.csv",row.names = FALSE)
 # save.image(file="saved.workspace.RData")
 
 # }

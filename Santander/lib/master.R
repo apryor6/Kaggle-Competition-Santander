@@ -17,9 +17,19 @@ source("project/Santander/munge/feature-purchase-frequency.R")
 # Engineer the rest of the features and do some minor cleaning before modeling
 source("project/Santander/lib/engineer-features.R")
 
-# XGBoost model with repeated single classification tasks. The probability of
-# purchasing each product is determined
-source("project/Santander/lib/model_xgboost_ajp.R")
+# Build models and make predictions
+source("project/Santander/lib/model_xgboost_multiclass_ajp_best.R")
+source("project/Santander/lib/model_xgboost_singleclass_ajp_best.R")
+source("project/Santander/lib/model_xgboost_multiclass_ajp_1.R")
+source("project/Santander/lib/model_xgboost_singleclass_ajp_1.R")
+source("project/Santander/lib/model_xgboost_multiclass_ajp_2.R")
+source("project/Santander/lib/model_xgboost_singleclass_ajp_2.R")
+source("project/Santander/lib/model_xgboost_multiclass_ajp_3.R")
+source("project/Santander/lib/model_xgboost_singleclass_ajp_3.R")
+
+
+# Combine predictions from various models
+source("project/Santander/lib/combine-predictions.R")
 
 # Generate all recommendations and compute MAP@7 score on the validation data
 source("project/Santander/lib/generate-recommendations.R")

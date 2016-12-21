@@ -11,6 +11,7 @@ library(lubridate)
 library(fasttime)
 source('project/Santander/lib/get_recommendations.R')
 source('project/Santander/lib/MAP.R')
+source("project/Santander/lib/months-since-owned.R")
 
 set.seed(1)
 val.train.month <- 5
@@ -113,6 +114,8 @@ names(test)[names(test) %in% products] <- paste(names(test)[names(test) %in% pro
 df[is.na(df)] <- 0
 test[is.na(test)] <- 0
 
+df <- months.since.owned(df,products,12)
+test <- months.since.owned(test,products,12)
 df <- as.data.frame(df)
 test <- as.data.frame(test)
 
