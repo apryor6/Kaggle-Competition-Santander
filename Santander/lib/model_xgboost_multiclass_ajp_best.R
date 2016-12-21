@@ -14,7 +14,7 @@ source('project/Santander/lib/MAP.R')
 
 set.seed(1)
 use.resampling.weights <- FALSE
-use.many.seeds         <- TRUE
+use.many.seeds         <- FALSE
 if (use.many.seeds){
   rand.seeds <- 1:10
 } else{
