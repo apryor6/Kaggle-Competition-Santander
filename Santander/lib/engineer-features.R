@@ -14,6 +14,9 @@ source('project/Santander/lib/MAP.R')
 source("project/Santander/lib/months-since-owned.R")
 
 set.seed(1)
+# Train on month 5 and 11 and validate on 17 for CV data then
+# train on month 6 and 12 and predict on test. The second months are separated
+# into a separate variable so I can turn on/off using them
 val.train.month <- 5
 val.test.month  <- 17
 train.month     <- 6
@@ -35,7 +38,6 @@ recent.activity.index <- merge(rbind(df[,.(ncodpers,month.id,ind_actividad_clien
                                by=c("ncodpers","month.id"),
                                sort=FALSE)
                                # all.x=TRUE) # might not want all.x here, means people that weren't customers last month will be considered to change activity
-# recent.activity.index[is.na(recent.activity.index)] <- 0
 recent.activity.index[,activity.index.change:=ind_actividad_cliente-old.ind_actividad_cliente]
 recent.activity.index[,segmento.change:=as.integer(segmento!=old.segmento)]
 df   <- merge(df,recent.activity.index[,.(ncodpers,
@@ -58,14 +60,11 @@ df$old.segmento[is.na(df$old.segmento)] <- df$segmento[is.na(df$old.segmento)]
 df$ind_actividad_cliente[is.na(df$ind_actividad_cliente)] <- df$old.ind_actividad_cliente[is.na(df$ind_actividad_cliente)] 
 
 df[is.na(df)] <- 0
-# test[is.na(test)] <- 0
 
 products <- names(df)[grepl("ind_+.*_+ult",names(df))]
 
-# we are training only on june 2015, so there is 5 months of history before that.
-# so I will consider only the 5 months before the testing date for creating features
+# create a data frame with just the product ownership variables so we can create lag ownership features
 products.owned <- df %>%
-  # filter(month.id <= 6 | month.id >=12) %>%
   select(ncodpers,month.id,one_of(products)) %>%
   as.data.table()
 
@@ -75,15 +74,12 @@ original.month.id <- products.owned$month.id
 df <- df[month.id %in% months.to.keep,]
 
 
-# test <- as.data.table(test)
 test <- test[,!names(test) %in% products,with=FALSE] #lazy, but I'm removing product ownership because it is about to be readded month by month
-# original.month.id <- products.owned$month.id
-# df <- df[month.id=6,] # only train June 2015
 
 # create features indicating whether or not a product was owned in each of the past
-# 5 months. for each lag, match the month with the earlier one and through some name manipulation
+# X months. for each lag, match the month with the earlier one and through some name manipulation
 # extract whether the product was owned or not
-for (month.ago in 1:12){
+for (month.ago in 1:11){
   print(paste("Collecting data on product ownership",month.ago,"months ago..."))
   products.owned[,month.id:=original.month.id+month.ago]
   df <- merge(df,products.owned,by=c("ncodpers","month.id"),all.x=TRUE)
@@ -109,11 +105,13 @@ for (month.ago in 1:12){
   
 }
 names(test)[names(test) %in% products] <- paste(names(test)[names(test) %in% products],"_1month_ago",sep="")
-# rm(list=c("products.owned","original.month.id"))
 
+# there will be NA values where there isn't a match to the left side since we used all.x=TRUE, assume those correspond
+# to products that were not owned
 df[is.na(df)] <- 0
 test[is.na(test)] <- 0
 
+# get the number of months since each product was owned
 df <- months.since.owned(df,products,12)
 test <- months.since.owned(test,products,12)
 df <- as.data.frame(df)
@@ -124,60 +122,12 @@ test <- as.data.frame(test)
 df$total_products <- rowSums(df[,names(df) %in% names(df)[grepl("ind.*1month\\_ago",names(df))]],na.rm=TRUE)
 test$total_products <- rowSums(test[,names(test) %in% names(test)[grepl("ind.*1month\\_ago",names(test))]],na.rm=TRUE)
 
-
-#### try inserting here instead
+# save the month id for use creating window ownership features
 products.owned$month.id <- original.month.id
-# 
-# df <- as.data.table(df)
-# test <- as.data.table(test)
-# products.owned[,month.previous.id:=month.id-1]
-# dropped.products <- merge(products.owned,products.owned,by.x=c("ncodpers","month.previous.id"),by.y=c("ncodpers","month.id"),all.x=TRUE,sort=FALSE)
-# dropped.products[is.na(dropped.products)] <- 0
-# added.products <- dropped.products
-# for (product in products){
-#   print(paste("Getting drop history for",product))
-#   colx <- paste(product,".x",sep="")
-#   coly <- paste(product,".y",sep="")
-#   diff <- dropped.products[,(get(colx)-get(coly))]
-#   dropped.products[,dropped:=ifelse(diff<0,1,0)]
-# 
-#   diff.added <- added.products[,(get(colx)-get(coly))]
-#   added.products[,added:=ifelse(diff.added>0,1,0)]
-# 
-#   print(paste("Num dropped",sum(dropped.products$dropped)))
-#   print(paste("Num added",sum(added.products$added)))
-# 
-#   for(month.ago in 1:5){
-#     colname <- paste(product,"_dropped_",month.ago,"months_ago",sep="")
-#     tmp <- merge(df[,.(ncodpers,month.id=month.id-month.ago)],dropped.products[,.(ncodpers,month.id,dropped)],by=c("ncodpers","month.id"),all.x=TRUE,sort=FALSE)
-#     # tmp <- merge(df[,.(ncodpers,month.id=month.id-1)],tmp[,.(ncodpers,month.id,dropped)],by=c("ncodpers","month.id"),sort=FALSE)
-#     df[[colname]] <- tmp$dropped
-# 
-#     tmp <- merge(test[,.(ncodpers,month.id=month.id-month.ago)],dropped.products[,.(ncodpers,month.id,dropped)],by=c("ncodpers","month.id"),all.x=TRUE,sort=FALSE)
-#     # tmp <- merge(test[,.(ncodpers,month.id=month.id-1)],tmp[,.(ncodpers,month.id,dropped)],by=c("ncodpers","month.id"),sort=FALSE)
-#     test[[colname]] <- tmp$dropped
-# 
-# 
-#     colname <- paste(product,"_added_",month.ago,"months_ago",sep="")
-#     tmp <- merge(df[,.(ncodpers,month.id=month.id-month.ago)],added.products[,.(ncodpers,month.id,added)],by=c("ncodpers","month.id"),all.x=TRUE,sort=FALSE)
-#     # tmp <- merge(df[,.(ncodpers,month.id=month.id-1)],tmp[,.(ncodpers,month.id,dropped)],by=c("ncodpers","month.id"),sort=FALSE)
-#     df[[colname]] <- tmp$added
-# 
-#     tmp <- merge(test[,.(ncodpers,month.id=month.id-month.ago)],added.products[,.(ncodpers,month.id,added)],by=c("ncodpers","month.id"),all.x=TRUE,sort=FALSE)
-#     # tmp <- merge(test[,.(ncodpers,month.id=month.id-1)],tmp[,.(ncodpers,month.id,dropped)],by=c("ncodpers","month.id"),sort=FALSE)
-#     test[[colname]] <- tmp$added
-# 
-#   }
-# }
-# df[is.na(df)] <- 0
-# test[is.na(test)] <- 0
-# df <- as.data.frame(df)
-# test <- as.data.frame(test)
-# # 
-# 
-# 
-# 
-# windows of product ownership
+
+# windows of product ownership. For each window size look back at previous months and see if the product was 
+# ever owned. I do this by adding the value of the ownership variable X months ago for X = 1:window.size
+# then converting to a binary indicator if the value is positive (meaning it was owned at least once)
  for (product in products){
    for (window.size in 2:6){
      print(paste("Getting ownership for",product,"within last",window.size,"months"))
@@ -194,26 +144,19 @@ products.owned$month.id <- original.month.id
    }
  }
 
-
-
-## need to fix this
-# df <- unique(df)
-# test <- unique(test)
-
+# add in purchase frequency feature for each product
 purchase.frequencies <- fread("purchase.frequencies.csv")
-purchase.frequencies.later.csv <- fread("purchase.frequencies.later.csv")
 
 df   <- merge(df,purchase.frequencies,by=c("month.id","ncodpers"),all.x = TRUE)
-test <- merge(test,purchase.frequencies.later.csv,by=c("month.id","ncodpers"), all.x=TRUE)
+test <- merge(test,purchase.frequencies,by=c("month.id","ncodpers"), all.x=TRUE)
 df[is.na(df)] <- 0
 test[is.na(test)] <- 0
 
+# fix some rare value that was causing an error
 df$sexo[df$sexo=="UNKNOWN"] <- "V"
 test$sexo[test$sexo=="UNKNOWN"] <- "V"
 
-
-
-
+# append "_target" so I can keep straight which are the target variables and which indicate ownership as a feature
 new.names <- names(df)
 new.names[new.names %in% products] <- paste(new.names[new.names %in% products],"_target",sep="")
 names(df) <- new.names
@@ -222,7 +165,6 @@ labels <- names(df)[grepl(".*_target",names(df))]
 purchase.w <- names(df)[grepl(".*.count",names(df))]
 # products <- names(df)[grepl("ind_+.*_+ult",names(df)) & !grepl(".*_target|.count|month\\_ago",names(df))]
 ownership.names <- names(df)[grepl("month\\_ago",names(df))]
-numeric.cols <- c("age","renta","antiguedad",purchase.w,"total_products","num.transactions")
 
 
 test$ind_empleado[test$ind_empleado=="S"] <- "N" # Some rare value that was causing errors with factors later
@@ -233,34 +175,33 @@ df$ind_empleado[df$ind_empleado=="S"] <- "N"
 char.cols <- names(df)[sapply(df,is.character)]
 df[,char.cols] <- lapply(df[,char.cols], as.factor)
 
+# force the factor levels to be the same 
 factor.cols <- names(test)[sapply(test,is.factor)]
 for (col in factor.cols){
   df[[col]] <- factor(df[[col]],levels=levels(test[[col]]))
 }
 df$ult_fec_cli_1t[is.na(df$ult_fec_cli_1t)] <- "UNKNOWN"
 
+# only keep entries where customers purchased products and the month matches one of our sets
 purchased <- as.data.frame(fread("purchased-products.csv"))
 ids.val.train   <- purchased$ncodpers[purchased$month.id %in% val.train.month & (purchased$products!="")]
 ids.val.test    <- purchased$ncodpers[purchased$month.id %in% val.test.month & (purchased$products!="")]
 ids.train       <- purchased$ncodpers[purchased$month.id %in% train.month & (purchased$products!="")]
-# extra.train.ids <- purchased$ncodpers[purchased$month.id %in% extra.train.months & (purchased$products!="")]
-# extra.train.ids.val <- intersect(purchased$ncodpers[purchased$month.id %in% extra.train.months.val & (purchased$products!="")],
-                             # df$ncodpers[df$segmento.change==1 | df$activity.index.change==1])
-# extra.train.ids.test <- intersect(purchased$ncodpers[purchased$month.id %in% extra.train.months.test & (purchased$products!="")],
-                                 # df$ncodpers[df$segmento.change==1 | df$activity.index.change==1])
 
 extra.train.ids.val <- purchased$ncodpers[purchased$month.id %in% extra.train.months.val & (purchased$products!="")]
 extra.train.ids.test <- purchased$ncodpers[purchased$month.id %in% extra.train.months.test & (purchased$products!="")]
 
-
+# convert the birthday month feature to a named factor
 df$birthday.month   <- factor(month.abb[df$birthday.month],levels=month.abb)
 test$birthday.month <- factor(month.abb[test$birthday.month],levels=month.abb)
 
 df$month   <- factor(month.abb[df$month],levels=month.abb)
 test$month <- factor(month.abb[test$month],levels=month.abb)
 
+# discard some columns that are no longer useful
 df <- select(df,-fecha_alta,-fecha_dato,-month.previous.id)
 
+# separate the data into the various parts
 extra.train.val <- df %>% 
   filter(ncodpers %in% extra.train.ids.val & month.id %in% extra.train.months.val)
 
@@ -279,21 +220,6 @@ df <- df %>%
 test <- test %>% 
   dplyr::select(-fecha_alta,-fecha_dato,-month.previous.id) 
 
-# val.test <- rbind(val.test,extra.train)
-# df       <- rbind(df,extra.train)
-
-
-# recent.birthday  <- (fread("cleaned_train.csv")) %>%
-  # select(ncodpers,month.id,age,antiguedad)
-# recent.birthday  <- (fread("test_ver2.csv")) %>%
-  # select(ncodpers,month.id,age,antiguedad)
-# tmp <-  merge(recent.birthday, 
-                          # recent.birthday[,.(ncodpers,month.id=month.id+1,age,antiguedad)],
-                          # by=c("ncodpers","month.id"))
-
-
-# write.csv(df,"train_prepped.csv",row.names=FALSE)
-# write.csv(test,"test_prepped.csv",row.names=FALSE)
-
+# save as binary for faster loading
 save(df,test,val.train,val.test,extra.train.val,extra.train.test,file="data_prepped.RData")
 

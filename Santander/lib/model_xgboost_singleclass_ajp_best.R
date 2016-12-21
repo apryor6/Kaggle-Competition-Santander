@@ -13,30 +13,21 @@ source('project/Santander/lib/MAP.R')
 
 
 set.seed(1)
-use.many.seeds         <- TRUE
+use.many.seeds   <- FALSE # run model with 10 different seeds?
 if (use.many.seeds){
   rand.seeds <- 101:110
 } else{
   rand.seeds <- 1
 }
 # read data
-# df   <- as.data.frame(fread("train_prepped.csv", stringsAsFactors = TRUE))
-# test <- as.data.frame(fread("test_prepped.csv" , stringsAsFactors = TRUE))
+
 load("data_prepped.RData")
 use.extra.train.FLAG = TRUE
 if (use.extra.train.FLAG){
   val.train <- rbind(val.train,extra.train.val)
   df       <- rbind(df,extra.train.test)
 }
-# df$ind_actividad_cliente <- sample(c(0,1),nrow(df),replace=TRUE)
-# fraction.to.replace <- 0.50
-# ind.to.replace <- sample(nrow(df),round(nrow(df))*fraction.to.replace)
-# df$ind_actividad_cliente[ind.to.replace] <- df$ind_tjcr_fin_ult1_target[ind.to.replace]
 
-# purchase.history <- fread("purchase-history.csv")
-# df   <- merge(df,purchase.history,by=c("ncodpers","month.id"),sort=FALSE)
-# test <- merge(test,purchase.history,by=c("ncodpers","month.id"),sort=FALSE)
-# rm(purchase.history)
 
 purchase.count <- fread("purchase-count.csv")
 df   <- merge(df,purchase.count,by=c("ncodpers","month.id"),sort=FALSE)
@@ -74,15 +65,8 @@ numeric.cols <- c("age",
                   purchase.w,
                   "total_products",
                   "num.transactions",
-                  # num.added.names,
                   num.purchases.names)
-                  # total.products.names)
-                  # total.products.names)
-#
-# clust <- kmeans(rbind(df[,names(df) %in% numeric.cols],test[,names(test) %in% numeric.cols]),centers = 10)
-# df[["clust"]] <- as.factor(clust$cluster[1:nrow(df)])
-# test[["clust"]] <- as.factor(clust$cluster[(1+nrow(df)):length(clust$cluster)])
-# categorical features. These will be one-hot encoded
+
 categorical.cols <- c("sexo",
                       "ind_nuevo",
                       "ind_empleado",
@@ -92,22 +76,13 @@ categorical.cols <- c("sexo",
                       "indresi",
                       "indrel",
                       "tiprel_1mes",
-                      # ownership.names[grepl("1month",ownership.names)],
-                      
                       ownership.names,
                       owned.within.names,
                       "segmento.change",
                       "activity.index.change",
                       "ind_actividad_cliente",
                       "month",
-#                       "canal_entrada",
-                      # ownership.names,
                       "birthday.month")
-                      # added.products,
-                      # dropped.products,
-                      # "canal_entrada")
-            #canal entrada?
-
 
 # one-hot encode the categorical features
 ohe <- dummyVars(~.,data = df[,names(df) %in% categorical.cols])
@@ -116,8 +91,8 @@ ohe.test <- dummyVars(~.,data = test[,names(test) %in% categorical.cols])
 ohe.test <- as(data.matrix(predict(ohe.test,test[,names(test) %in% categorical.cols])), "dgCMatrix")
 ohe.val.train <- dummyVars(~.,data = val.train[,names(val.train) %in% categorical.cols])
 ohe.val.train <- as(data.matrix(predict(ohe.val.train,val.train[,names(val.train) %in% categorical.cols])), "dgCMatrix")
-ohe.val.test <- dummyVars(~.,data = val.test[,names(val.test) %in% categorical.cols])
-ohe.val.test <- as(data.matrix(predict(ohe.val.test,val.test[,names(val.test) %in% categorical.cols])), "dgCMatrix")
+ohe.val.test  <- dummyVars(~.,data = val.test[,names(val.test) %in% categorical.cols])
+ohe.val.test  <- as(data.matrix(predict(ohe.val.test,val.test[,names(val.test) %in% categorical.cols])), "dgCMatrix")
 
 train.labels        <- list()
 train.labels.val        <- list()
@@ -143,7 +118,7 @@ save.id.test.val       <- val.test$ncodpers
 save.month.id.test.val <- val.test$month.id
 save.month.val    <- val.train$month
 val.train         <- cbind(ohe.val.train,data.matrix(val.train[,names(val.train) %in% numeric.cols]))
-val.test       <- cbind(ohe.val.test,data.matrix(val.test[,names(val.test) %in% numeric.cols]))
+val.test          <- cbind(ohe.val.test,data.matrix(val.test[,names(val.test) %in% numeric.cols]))
 set.seed(1)
 
 # use a 75/25 train/test split so we can compute MAP@7 locally. The test set
@@ -231,10 +206,8 @@ predictions <- c(predictions,build.predictions.xgboost(df,test,train.labels[[lab
 
 # collect the results
 predictions <- as.data.table(predictions)
-# predictions_val <- as.data.table(predictions_val)
 predictions_val_future <- as.data.table(predictions_val_future)
 test        <- as.data.table(cbind(data.frame(data.matrix(test)),predictions))
-# val        <- as.data.table(cbind(data.frame(data.matrix(df[-train.ind,])),predictions_val))
 val_future        <- as.data.table(cbind(data.frame(data.matrix(val.test)),predictions_val_future))
 
 # can drop some of the data at this point and put back the id's
@@ -242,17 +215,12 @@ test <- test[,grepl("ind_+.*_+ult",names(test)),with=FALSE]
 test$ncodpers <- save.id.test
 test$month.id <- save.month.id.test
 
-# val <- val[,grepl("ind_+.*_+ult",names(val)),with=FALSE]
-# val$ncodpers <- save.id[-train.ind]
-# val$month.id <- save.month.id[-train.ind]
-
 val_future <- val_future[,grepl("ind_+.*_+ult",names(val_future)),with=FALSE]
 val_future$ncodpers <- save.id.test.val
 val_future$month.id <- save.month.id.test.val
 
+# get product names
 products <- gsub("_target","",labels)
-
-# full <- as.data.frame(fread("cleaned_train.csv"))
 
 # the features containing "1month_ago" will tell us whether or not a product is a new purchase in our predictions
 owned.products <- names(test)[grepl("1month\\_ago",names(test)) & !(grepl("_pred",names(test)))]
@@ -264,25 +232,12 @@ save(products,file="project/Santander/lib/products.Rdata")
 test <- test %>%
   select(ncodpers,month.id,contains("_pred"),contains("1month"))
 names(test)[grepl("1month",names(test))] <- gsub("\\_1month\\_ago","",names(test)[grepl("1month",names(test))])
-# val <- val %>%
-#   select(ncodpers,month.id,contains("_pred"),contains("1month"))
-# names(val)[grepl("1month",names(val))] <- gsub("\\_1month\\_ago","",names(val)[grepl("1month",names(val))])
+
 val_future <- val_future %>%
   select(ncodpers,month.id,contains("_pred"),contains("1month"))
 names(val_future)[grepl("1month",names(val_future))] <- gsub("\\_1month\\_ago","",names(val_future)[grepl("1month",names(val_future))])
-# save the results
 
-
-# test.recs <- get.recommendations(as.data.table(test),products)
-# val.recs  <- get.recommendations(as.data.table(val),products)
-# val$added_products <- val.recs$added_products
-# 
-# purchased <- as.data.frame(fread("purchased-products.csv"))
-# val <- val %>%
-#   merge(purchased,by=c("ncodpers","month.id"))
-# MAP <- mapk(k=7,strsplit(val$products, " "),strsplit(val$added_products," "))
-# print(paste("Validation MAP@7 = ",MAP))
-
+# get the local MAP@7 CV score
 val.recs.future  <- get.recommendations(as.data.table(val_future),products)
 val_future$added_products <- val.recs.future$added_products
 
@@ -302,10 +257,7 @@ print(paste("Validation future MAP@7 = ",MAP))
   # }
 # }
 
-  write.csv(test,"/u/project/miao/apryor/ml/xgboost_preds_test_singleclass_best.csv",row.names = FALSE)
-  # write.csv(val,"xgboost_preds_val.csv",row.names = FALSE)
-  write.csv(val_future,"/u/project/miao/apryor/ml/xgboost_preds_val_future_singleclass_best.csv",row.names = FALSE)
-  # save.image(file="saved.workspace.RData")
-  
+write.csv(test,"xgboost_preds_test.csv",row.names = FALSE)
+write.csv(val_future,"xgboost_preds_val_future.csv",row.names = FALSE)
+
 # }
-# write.csv(out.recs,"recommendations_xgboost.csv",row.names = FALSE)

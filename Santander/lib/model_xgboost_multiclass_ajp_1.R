@@ -411,9 +411,9 @@ print(paste("Validation future MAP@7 = ",MAP))
 # }
 # }
 
-write.csv(test,"/u/project/miao/apryor/ml/xgboost_preds_test_multiclass_1.csv",row.names = FALSE)
+write.csv(test,"xgboost_preds_test_multiclass_1.csv",row.names = FALSE)
 # write.csv(val,"xgboost_preds_val.csv",row.names = FALSE)
-write.csv(val_future,"/u/project/miao/apryor/ml/xgboost_preds_val_future_multiclass_1.csv",row.names = FALSE)
+write.csv(val_future,"xgboost_preds_val_future_multiclass_1.csv",row.names = FALSE)
 # save.image(file="saved.workspace.RData")
 
 # }

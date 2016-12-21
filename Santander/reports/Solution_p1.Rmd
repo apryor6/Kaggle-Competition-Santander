@@ -5,30 +5,680 @@ output: github_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+setwd("~/kaggle/competition-santander/")
 ```
 
-## Competition Solution
-
-This is a detailed description of our best solution to the [Santander Product Recommendation](https://www.kaggle.com/c/santander-product-recommendation) competition hosted by [Kaggle](http://www.kaggle.com). The challenge was to produce a recommendation system for Santander Banks. They provide a number of financial services (savings accounts, credit cards, etc), and the competition dataset included ~13.6 million records of their customers over a period over a 1.5 year period. The goal was to predict which new products a customer would purchase, if any, in the next month, which was withheld. For this competition I teamed up with my good friend and fellow data scientist Matt -- you can check out his blog [here](http://statmills.com). Matt did a lot of useful statistical/correlative analysis of purchasing trends which I used to build the final machine learning models.
-
-### Solution Summary
-
-*Most of the code used in this competition has been slightly modified for embedding in this document and includes additional comments/explanations, but the full, original code is also available [on Github]() along with instructions for running it*
-
-Our solution was a collection of 22 XGBoost trained on data from June 2015 and December 2015 for only accounts that added products with an additional NUMBER-HERE engineered features (described below). Really it was just one XGBoost model that was trained once for each of the 22 products in turn as the target label. Technically there were 24 products, but two of them, `ind_aval_fin_ult1` and `ind_ahor_fin_ult1`, were discarded for being exceedingly rare. The resulting probabilities for each of the 22 remaining products in June 2016 were sorted, and for each account the top 7 products that were not owned in May 2016 were recommended as the final solution.  
-
-There were a couple of key insights that were critical to sucess in this competition. The first was limiting the dataset to only accounts that actually added any products. Note that the challenge is to predict which products a customer will by *if any*. We don't need to determine the likelihood that they actually make the purchase, and as the final score is evaluated using mean average precision ([MAP@7](https://www.kaggle.com/wiki/MeanAveragePrecision)), any recommendations made to accounts that don't purchase anything does not affect the score negatively. Adding products is a rare event and limiting only to entries where products were added reduces the dataset size from about 1 million entries per month to a much more reasonable 20-40,000.
-
-Second, we found that the testing month, June, is special in Spain because that is when taxes are due. The result is that product purchase trends are quite different for June, particularly for tax services (d'oh). A helpful visualization of this was [provided by Russ W](https://www.kaggle.com/c/santander-product-recommendation/forums/t/25629/product-month-stacked-bar-chart). Training on data from June 2015 for accounts that added products with just the original features plus an additional one indicating whether or not each product was owned last month (which you need anyway to determine whether or not each product could have been added in the first place) produced a MAP@7 of ~0.027, which would have placed around top 35%.
-
-The third realization was that the most useful features were those related to product ownership. After looking at the feature importance outputted  by XGBoost, I added the product ownership status for each of the previous 2-5 months as features in addition to the most recent month and applied the above strategy to produce a MAP@7 greater than 0.03, which would have resulted in a top 100 finish and a bronze medal. These lagged ownership features were limited to 5 months because the earliest data was from Jan. 2015 and thus this was the furthest back we could go. If I were actually being contracted by Santander to build a recommendation system, this is likely where I would stop. Estimates of the maximum possible score [were around 0.035](https://kaggle2.blob.core.windows.net/forum-message-attachments/146271/5405/Private%20maximum%20score.png?sv=2015-12-11&sr=b&sig=c4ljinra%2F8PXV85C8TuSBfHM3CeyrOKkKXDhI01yJIY%3D&se=2016-12-19T18%3A27%3A15Z&sp=r), so with this fairly simple approach we have already achieved more than 85% of the maximum possible precision. The additional time invested and model complexity added to increase performance from 0.03 to 0.0305 (HOW MANY PLACES) was significant. But this is a competition so we press on.
-
-The decision to train on December 2015 resulted from my trying to engineer more features related to product ownership. I figured there is a trade-off between 1) the advantage of capturing June-specific trends by training on June and 2) capturing product ownership trends by training on later months that have a longer history. I was in the process of exploring which months had similar purchasing patterns to June when Kaggler [AMZ](https://www.kaggle.com/albertomz) posted [this analysis](https://www.kaggle.com/c/santander-product-recommendation/forums/t/26138/interesting-relationship-between-june-and-december?forumMessageId=148422). He found December to be most similar to June and saved me some time, so many thanks to him for that. Training examples in December can contain up to 11 months of historical ownership features, the inclusion of which improved precision to ~0.0304 (TOP WHAT PERCENT??).
-
-The final improvement to WHAT SCORE? was the result of the following additional features (mostly product related):
-
- * one
- * two
- * three
-  
 ## Code Walkthrough
+
+To start, we explore and clean the data. 
+*Most of the following few sections were written by me at the very beginning of the competition when I was actually doing the exploration, and I have left the text mostly intact. Some approaches were changed later, such as the treatment of missing values, and I have added notes accordingly. Comments from future me are in italics*
+```{r message=FALSE, warning=FALSE} 
+library(data.table)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(ggplot2)
+library(fasttime)
+```
+
+#### ggplot2 Theme Trick
+A cool trick to avoid repetitive code in `ggplot2` is to save/reuse your own theme. I'll build one here and use it throughout.
+```{r message=FALSE, warning=FALSE}
+my_theme <- theme_bw() +
+  theme(axis.title=element_text(size=24),
+        plot.title=element_text(size=36),
+        axis.text =element_text(size=16))
+
+my_theme_dark <- theme_dark() +
+  theme(axis.title=element_text(size=24),
+        plot.title=element_text(size=36),
+        axis.text =element_text(size=16))
+
+```
+
+## First Glance
+```{r message=FALSE, warning=FALSE}
+setwd("~/kaggle/competition-santander/")
+set.seed(1)
+df   <- (fread("train_ver2.csv"))
+test <- (fread("test_ver2.csv"))
+features <- names(df)[grepl("ind_+.*ult.*",names(df))]
+```
+
+I will create a label for each product and month that indicates whether a customer added, dropped or maintained that service in that billing cycle. I will do this by assigning a numeric id to each unique time stamp, and then matching each entry with the one from the previous month. The difference in the indicator value for each product then gives the desired value.  
+A cool trick to turn dates into unique id numbers is to use `as.numeric(factor(...))`. Make sure to order them chronologically first.
+
+```{r message=FALSE, warning=FALSE}
+df                     <- df %>% arrange(fecha_dato) %>% as.data.table()
+df$month.id            <- as.numeric(factor((df$fecha_dato)))
+df$month.previous.id   <- df$month.id - 1
+test$month.id          <- max(df$month.id) + 1
+test$month.previous.id <- max(df$month.id)
+
+# Test data will contain the status of products for the previous month, which is a feature. The training data currently contains the status of products as labels, and will later be joined to the previous month to get the previous month's ownership as a feature. I choose to do it in this order so that the train/test data can be cleaned together and then split. It's just for convenience.
+test <- merge(test,df[,names(df) %in% c(features,"ncodpers","month.id"),with=FALSE],by.x=c("ncodpers","month.previous.id"),by.y=c("ncodpers","month.id"),all.x=TRUE)
+
+df <- rbind(df,test)
+
+```
+
+
+We have a number of demographics for each individual as well as the products they currently own. To make a test set, I will separate the last month from this training data, and create a feature that indicates whether or not a product was newly purchased. First convert the dates. There's `fecha_dato`, the row-identifier date, and `fecha_alta`, the date that the customer joined.
+
+```{r message=FALSE, warning=FALSE}
+df[,fecha_dato:=fastPOSIXct(fecha_dato)]
+df[,fecha_alta:=fastPOSIXct(fecha_alta)]
+unique(df$fecha_dato)
+```
+
+I printed the values just to double check the dates were in standard Year-Month-Day format. I expect that customers will be more likely to buy products at certain months of the year (Christmas bonuses?), so let's add a month column. I don't think the month that they joined matters, so just do it for one.
+```{r message=FALSE, warning=FALSE}
+df$month <- month(df$fecha_dato)
+```
+
+Are there any columns missing values?
+```{r message=FALSE, warning=FALSE}
+sapply(df,function(x)any(is.na(x)))
+```
+
+Definitely. Onto data cleaning.
+
+##Data Cleaning
+
+Going down the list, start with `age`
+```{r message=FALSE, warning=FALSE}
+ggplot(data=df,aes(x=age)) +
+  geom_bar(alpha=0.75,fill="tomato",color="black") +
+  xlim(c(18,100)) +
+  ggtitle("Age Distribution") +
+  my_theme
+```
+
+
+In addition to NA, there are people with very small and very high ages.
+It's also interesting that the distribution is bimodal. There are a large number of university aged students, and then another peak around middle-age. Let's separate the distribution and move the outliers to the mean of the closest one. I also add a feature indicating in which month the person's birthday is -- maybe you are more likely to add products then.
+*I later changed missing values to -1 as a flag and got __slightly__ better results. It seems some predictive power is contained in the lack of information itself. I also later discovered that the first 6 months of this dataset appear to be backfilled and are stagnant. For example, `antiguedad` (the number of months an account has existed) does not increment at all for the first 6 months. Here I use the person's birthday to backcorrect the ages. This might seem like a small thing to do, but there is a harsh cutoff at age 20 for ownership of junior accounts, so this little detail matters.*
+
+```{r message=FALSE, warning=FALSE}
+# df$age[(df$age < 18)] <- median(df$age[(df$age >= 18) & (df$age <=30)],na.rm=TRUE)
+# df$age[(df$age > 100)] <- median(df$age[(df$age >= 30) & (df$age <=100)],na.rm=TRUE)
+# df$age[is.na(df$age)] <- median(df$age,na.rm=TRUE)
+
+age.change  <- df[month.id>6,.(age,month,month.id,age.diff=c(0,diff(age))),by="ncodpers"]
+age.change  <- age.change[age.diff==1]
+age.change  <- age.change[!duplicated(age.change$ncodpers)]
+setkey(df,ncodpers)
+df <- merge(df,age.change[,.(ncodpers,birthday.month=month)],by=c("ncodpers"),all.x=TRUE,sort=FALSE)
+df$birthday.month[is.na(df$birthday.month)] <- 7 # July is the only month we don't get to check for increment so if there is no update then use it
+df$age[df$birthday.month <= 7 & df$month.id<df$birthday.month] <- df$age[df$birthday.month <= 7 & df$month.id<df$birthday.month]  - 1 # correct ages in the first 6 months
+
+df$age[is.na(df$age)] <- -1
+
+df$age <- round(df$age)
+```
+
+*I flip back and forth between `dplyr` and `data.table`, so sometimes you'll see me casting things back and forth like this.*
+```{r}
+df <- as.data.frame(df)
+```
+
+Next `ind_nuevo`, which indicates whether a customer is new or not. How many missing values are there?
+```{r message=FALSE, warning=FALSE}
+sum(is.na(df$ind_nuevo))
+```
+
+Let's see if we can fill in missing values by looking how many months of history these customers have.
+```{r message=FALSE, warning=FALSE}
+months.active <- df[is.na(df$ind_nuevo),] %>%
+  group_by(ncodpers) %>%
+  summarise(months.active=n())  %>%
+  select(months.active)
+max(months.active)
+```
+
+Looks like these are all new customers, so replace accordingly.
+```{r message=FALSE, warning=FALSE}
+df$ind_nuevo[is.na(df$ind_nuevo)] <- 1 
+```
+
+Now, `antiguedad`
+```{r message=FALSE, warning=FALSE}
+sum(is.na(df$antiguedad))
+```
+
+That number again. Probably the same people that we just determined were new customers. Double check.
+```{r message=FALSE, warning=FALSE}
+summary(df[is.na(df$antiguedad),]%>%select(ind_nuevo))
+```
+
+*This feature is the number of months since the account joined and suffers from the stagnation issue I mentioned previously in the first 6 months, and here I correct it. Many customers have a valid value for `fecha_alta`, the month that they joined, and this can be used to recompute `antiguedad`. For entries without `fecha_alta`, I assume the value of `antiguedad` at month 6 is correct and correct the rest accordingly.
+
+```{r message=FALSE, warning=FALSE}
+
+new.antiguedad <- df %>% 
+  dplyr::select(ncodpers,month.id,antiguedad) %>%
+  dplyr::group_by(ncodpers) %>%
+  dplyr::mutate(antiguedad=min(antiguedad,na.rm=T) + month.id - 6) %>% #month 6 is the first valid entry, so reassign based upon that reference
+  ungroup() %>%
+  dplyr::arrange(ncodpers) %>%
+  dplyr::select(antiguedad)
+df <- df %>%
+  arrange(ncodpers) # arrange so that the two data frames are aligned
+df$antiguedad <- new.antiguedad$antiguedad
+
+df$antiguedad[df$antiguedad<0] <- -1
+
+elapsed.months <- function(end_date, start_date) {
+  12 * (year(end_date) - year(start_date)) + (month(end_date) - month(start_date))
+}
+recalculated.antiguedad <- elapsed.months(df$fecha_dato,df$fecha_alta)
+df$antiguedad[!is.na(df$fecha_alta)] <- recalculated.antiguedad[!is.na(df$fecha_alta)]
+df$ind_nuevo <- ifelse(df$antiguedad<=6,1,0) # reassign new customer index
+```
+
+
+Some entries don't have the date they joined the company. Just give them something in the middle of the pack
+```{r message=FALSE, warning=FALSE}
+df$fecha_alta[is.na(df$fecha_alta)] <- median(df$fecha_alta,na.rm=TRUE)
+```
+
+
+Next is `indrel`, which indicates:
+
+> 1 (First/Primary), 99 (Primary customer during the month but not at the end of the month)
+
+This sounds like a promising feature. I'm not sure if primary status is something the customer chooses or the company assigns, but either way it seems intuitive that customers who are dropping down are likely to have different purchasing behaviors than others.
+
+```{r message=FALSE, warning=FALSE}
+table(df$indrel)
+```
+
+Fill in missing with the more common status.
+
+```{r message=FALSE, warning=FALSE}
+df$indrel[is.na(df$indrel)] <- 1
+```
+
+> tipodom	- Addres type. 1, primary address
+ cod_prov	- Province code (customer's address)
+
+`tipodom` doesn't seem to be useful, and the province code is not needed becaue the name of the province exists in `nomprov`.
+```{r message=FALSE, warning=FALSE}
+df <- df %>% select(-tipodom,-cod_prov)
+```
+
+Quick check back to see how we are doing on missing values
+```{r message=FALSE, warning=FALSE}
+sapply(df,function(x)any(is.na(x)))
+```
+
+Getting closer.
+
+```{r message=FALSE, warning=FALSE}
+sum(is.na(df$ind_actividad_cliente))
+```
+By now you've probably noticed that this number keeps popping up. A handful of the entries are just bad, and should probably just be excluded from the model. But for now I will just clean/keep them.  
+*I ultimately ended up keeping these entries and just kept the missing values separated*
+
+Just a couple more features.
+
+```{r message=FALSE, warning=FALSE}
+df$ind_actividad_cliente[is.na(df$ind_actividad_cliente)] <- median(df$ind_actividad_cliente,na.rm=TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+unique(df$nomprov)
+```
+
+There's some rows missing a city that I'll relabel
+
+```{r message=FALSE, warning=FALSE}
+df$nomprov[df$nomprov==""] <- "UNKNOWN"
+```
+
+
+Now for gross income, aka `renta`
+```{r message=FALSE, warning=FALSE}
+sum(is.na(df$renta))
+```
+
+Here is a feature that is missing a lot of values. Rather than just filling them in with a median, it's probably more accurate to break it down region by region. To that end, let's take a look at the median income by region, and in the spirit of the competition let's color it like the Spanish flag.
+
+```{r fig.width=8, fig.height=6.3}
+df %>%
+  filter(!is.na(renta)) %>%
+  group_by(nomprov) %>%
+  summarise(med.income = median(renta)) %>%
+  arrange(med.income) %>%
+  mutate(city=factor(nomprov,levels=nomprov)) %>%
+  ggplot(aes(x=city,y=med.income)) +
+  geom_point(color="#c60b1e") +
+  guides(color=FALSE) +
+  xlab("City") +
+  ylab("Median Income") +
+  my_theme +
+  theme(axis.text.x=element_blank(), axis.ticks = element_blank()) +
+  geom_text(aes(x=city,y=med.income,label=city),angle=90,hjust=-.25) +
+  theme(plot.background=element_rect(fill="#c60b1e"),
+        panel.background=element_rect(fill="#ffc400"),
+        panel.grid =element_blank(),
+        axis.title =element_text(color="#ffc400"),
+        axis.text  =element_text(color="#ffc400"),
+        plot.title =element_text(color="#ffc400")) +
+  ylim(c(60000,180000)) +
+
+
+  ggtitle("Income Distribution by City")
+```
+
+
+There's a lot of variation, so I think assigning missing incomes by providence is a good idea. This code gets kind of confusing in a nested SQL statement kind of way, but the idea is to first group the data by city, and reduce to get the median. This intermediate data frame is joined by the original city names to expand the aggregated median incomes, ordered so that there is a 1-to-1 mapping between the rows, and finally the missing values are replaced.  
+*Same story, I ended up not doing this and just treating missing values separately*
+
+```{r message=FALSE, warning=FALSE}
+# new.incomes <-df %>%
+#   select(nomprov) %>%
+#   merge(df %>%
+#   group_by(nomprov) %>%
+#   dplyr::summarise(med.income=median(renta,na.rm=TRUE)),by="nomprov") %>%
+#   select(nomprov,med.income) %>%
+#   arrange(nomprov)
+# df <- arrange(df,nomprov)
+# df$renta[is.na(df$renta)] <- new.incomes$med.income[is.na(df$renta)]
+# rm(new.incomes)
+# 
+# df$renta[is.na(df$renta)] <- median(df$renta,na.rm=TRUE)
+df$renta[is.na(df$renta)] <- -1
+```
+
+The last line is to account for any values that are still missing. For example, it seems every entry from Alava has NA for `renta`.
+
+The only remaining missing value are for features
+```{r message=FALSE, warning=FALSE}
+sum(is.na(df$ind_nomina_ult1))
+```
+
+I could try to fill in missing values for products by looking at previous months, but since it's such a small number of values for now I'll take the cheap way out.
+
+```{r message=FALSE, warning=FALSE}
+df[is.na(df)] <- 0
+```
+
+Now we have taken care of all the missing values. There's also a bunch of character columns that can contain empty strings, so we need to go through them. For the most part, entries with empty strings will be converted to an unknown category.
+
+```{r message=FALSE, warning=FALSE}
+str(df)
+```
+
+```{r message=FALSE, warning=FALSE}
+char.cols <- names(df)[sapply(df,is.character)]
+for (name in char.cols){
+  print(sprintf("Unique values for %s:", name))
+  print(unique(df[[name]]))
+  }
+```
+
+Okay, based on that and the definitions of each variable, I will fill the empty strings either with the most common value or create an unknown category based on what I think makes more sense.
+```{r message=FALSE, warning=FALSE}
+df$indfall[df$indfall==""]                 <- "N"
+df$tiprel_1mes[df$tiprel_1mes==""]         <- "A"
+df$indrel_1mes[df$indrel_1mes==""]         <- "1"
+df$indrel_1mes[df$indrel_1mes=="P"]        <- "5"
+df$indrel_1mes <- as.factor(as.integer(df$indrel_1mes))
+
+df$pais_residencia[df$pais_residencia==""] <- "UNKNOWN"
+df$sexo[df$sexo==""]                       <- "UNKNOWN"
+df$ult_fec_cli_1t[df$ult_fec_cli_1t==""]   <- "UNKNOWN"
+df$ind_empleado[df$ind_empleado==""]       <- "UNKNOWN"
+df$indext[df$indext==""]                   <- "UNKNOWN"
+df$indresi[df$indresi==""]                 <- "UNKNOWN"
+df$conyuemp[df$conyuemp==""]               <- "UNKNOWN"
+df$segmento[df$segmento==""]               <- "UNKNOWN"
+
+```
+
+
+Convert all the features to numeric dummy indicators (you'll see why in a second), and we're done cleaning
+```{r message=FALSE, warning=FALSE}
+features <- grepl("ind_+.*ult.*",names(df))
+df[,features] <- lapply(df[,features],function(x)as.integer(round(x)))
+```
+
+### Lag Features
+
+* Very important to this competition were so-called lag features, meaning that for each entry it was beneficial to consider not only the value of a feature for the current month, but also the value for previous months. Soon after discovering that lagged product ownership was a useful feature (i.e. whether or not a product was owned 1,2,3,4,etc months ago), I figured it was possible to use other lagged features. Here is a function that makes it easy to create such features. The idea is to join the data by account id, `ncodpers`, and to match the month with the lag month. For example, to add a 2-month lag feature to an observation in month 5, we want to extract the value of `feature.name` at month 3.*
+
+``` {r message=FALSE, warning=FALSE}
+# create-lag-feature.R
+
+create.lag.feature <- function(dt, # should be a data.table!
+                               feature.name, # name of the feature to lag
+                               months.to.lag=1,# vector of integers indicating how many months to lag
+                               by=c("ncodpers","month.id"), # keys to join data.tables by
+                               na.fill = NA)  
+  {
+  # get the feature and change the name to avoid .x and .y being appending to names
+  dt.sub <- dt[,mget(c(by,feature.name))]
+  names(dt.sub)[names(dt.sub) == feature.name] <- "original.feature"
+  original.month.id <- dt.sub$month.id
+  added.names <- c()
+  for (month.ago in months.to.lag){
+    print(paste("Collecting information on",feature.name,month.ago,"month(s) ago"))
+    colname <- paste("lagged.",feature.name,".",month.ago,"months.ago",sep="")
+    added.names <- c(colname,added.names)
+    # This is a self join except the month is shifted
+    dt.sub <- merge(dt.sub,
+                    dt.sub[,.(ncodpers,
+                                        month.id=month.ago+original.month.id,
+                                        lagged.feature=original.feature)],
+                    by=by,
+                    all.x=TRUE,
+                    sort=FALSE)
+    names(dt.sub)[names(dt.sub)=="lagged.feature"] <- colname
+    # dt.sub[[colname]][is.na(dt.sub[[colname]])] <- dt.sub[["original.feature"]][is.na(dt.sub[[colname]])]
+  }
+  df <- merge(dt,
+              dt.sub[,c(by,added.names),with=FALSE],
+              by=by,
+              all.x=TRUE,
+              sort=FALSE)
+  df[is.na(df)] <- na.fill
+  return(df)
+}
+```
+
+*Now I use that function to create lagged features of `ind_actividad_cliente`, the customer activity index. For a few percent of customers I noticed that `ind_actividad_cliente` was almost perfectly correlated with one of a few products (particularly `ind_tjcr_fin_ult1` (credit card), `ind_cco_fin_ult1` (current accounts), and `ind_recibo_ult1` (debit account)). I think this is actually a leak in the dataset, as it appears such a customer was marked as active because they used a product. Therefore, I thought this was going to be an extremely powerful feature, but it turned out to not provide much, if any, benefit. My conclusion was that although this was a useful predictor for that few percent of customers, the problem is being unable to identify which accounts followed this trend. To me it seems `ind_actividad_cliente` is recorded with high inconsistency. Some customers own many products and are marked inactive, while others are marked active but own nothing. Maybe one of the teams who outperformed us figured out how to utilize this information.* 
+
+```{r message=FALSE, warning=FALSE}
+source('~/kaggle/competition-santander/project/Santander/lib/create-lag-feature.R')
+df <- as.data.table(df)
+df <- create.lag.feature(df,'ind_actividad_cliente',1:11,na.fill=0)
+```
+
+*Junior accounts, `ind_ctju_fin_ult1`, are for those 19 and younger. I found that the month that a customer turned 20 there was a discontinuation of `ind_ctju_fin_ult1` followed by a high likelihood of adding e-accounts, `ind_ecue_fin_ult1`. I add a binary feature to capture this.*
+```{r message=FALSE, warning=FALSE}
+df[,last.age:=lag(age),by="ncodpers"]
+df$turned.adult <- ifelse(df$age==20 & df$last.age==19,1,0)
+df <- as.data.frame(df)
+```
+
+Now the data is cleaned, separate it back into train/test. I'm writing a csv file because I will do some other analysis that uses these files, but if you are ever just saving variables to use them again in R you should write binary files with `save` and `load` -- they are *way* faster.
+```{r}
+features <- names(df)[grepl("ind_+.*ult.*",names(df))]
+
+test <- df %>%
+  filter(month.id==max(df$month.id))
+df <- df %>%
+  filter(month.id<max(df$month.id))
+write.csv(df,"cleaned_train.csv",row.names=FALSE)
+write.csv(test,"cleaned_test.csv",row.names=FALSE)
+```
+
+## Data Visualization
+*These are some of the plots I made at the beginning of the competition to get a sense of what the data was like and to get preliminary ideas for features. I will say, however, that most of the useful insights ultimately came from a combination of XGBoost feature importance outputs and from going through the raw data for many accounts by hand.*
+To study trends in customers adding or removing services, I will create a label for each product and month that indicates whether a customer added, dropped or maintained that service in that billing cycle. I will do this by assigning a numeric id to each unique time stamp, and then matching each entry with the one from the previous month. The difference in the indicator value for each product then gives the desired value.  
+A cool trick to turn dates into unique id numbers is to use `as.numeric(factor(...))`. Make sure to order them chronologically first.
+
+```{r message=FALSE, warning=FALSE}
+features          <- grepl("ind_+.*ult.*",names(df))
+df[,features]     <- lapply(df[,features],function(x)as.integer(round(x)))
+df$total.services <- rowSums(df[,features],na.rm=TRUE)
+df                <- df %>% arrange(fecha_dato)
+df$month.id       <- as.numeric(factor((df$fecha_dato)))
+df$month.next.id  <- df$month.id + 1
+```
+
+Now I'll build a function that will convert differences month to month into a meaningful label. Each month, a customer can either maintain their current status with a particular product, add it, or drop it.
+```{r message=FALSE, warning=FALSE}
+status.change <- function(x){
+  if ( length(x) == 1 ) { # if only one entry exists, I'll assume they are a new customer and therefore are adding services
+    label = ifelse(x==1,"Added","Maintained")
+  } else {
+    diffs <- diff(x) # difference month-by-month
+    diffs <- c(0,diffs) # first occurrence will be considered Maintained, which is a little lazy. A better way would be to check if the earliest date was the same as the earliest we have in the dataset and consider those separately. Entries with earliest dates later than that have joined and should be labeled as "Added"
+    label <- rep("Maintained", length(x))
+    label <- ifelse(diffs==1,"Added",
+                    ifelse(diffs==-1,"Dropped",
+                           "Maintained"))
+  }
+  label
+}
+```
+
+Now we can actually apply this function to each feature using `lapply` and `ave`
+
+```{r echo=TRUE,message=FALSE,warning=FALSE}
+df[,features] <- lapply(df[,features], function(x) return(ave(x,df$ncodpers, FUN=status.change)))
+```
+
+I'm only interested in seeing what influences people adding or removing services, so I'll trim away any instances of "Maintained". Since big melting/casting operations can be slow, I'll take the time to check for rows that should be completely removed, then melt the remainder and remove the others.
+
+```{r message=FALSE, warning=FALSE}
+interesting <- rowSums(df[,features]!="Maintained")
+df          <- df[interesting>0,]
+df          <- df %>%
+                gather(key=feature,
+                value=status,
+                ind_ahor_fin_ult1:ind_recibo_ult1)
+df          <- filter(df,status!="Maintained")
+head(df)
+```
+
+
+Does the ratio of dropping/adding services change over the year?
+```{r message=FALSE, warning=FALSE,fig.width=12, fig.height=9}
+totals.by.feature <- df %>%
+  group_by(month,feature) %>%
+  summarise(counts=n())
+
+df %>% 
+  group_by(month,feature,status) %>%
+  summarise(counts=n())%>%
+  ungroup() %>%
+  inner_join(totals.by.feature,by=c("month","feature")) %>%
+
+  mutate(counts=counts.x/counts.y) %>%
+  ggplot(aes(y=counts,x=factor(month.abb[month],levels=month.abb[seq(12,1,-1)]))) +
+  geom_bar(aes(fill=status), stat="identity") +
+  facet_wrap(facets=~feature,ncol = 6) +
+  coord_flip() +
+  my_theme_dark + 
+  ylab("Count") +
+  xlab("") + 
+  ylim(limits=c(0,1)) +
+  ggtitle("Relative Service \nChanges by Month") +
+  theme(axis.text   = element_text(size=10),
+        legend.text = element_text(size=14),
+        legend.title= element_blank()      ,
+        strip.text  = element_text(face="bold")) +
+  scale_fill_manual(values=c("cyan","magenta"))
+```
+
+Let's see how product changes vary over the calendar year. Some months occur more than others, so we need to account for that.
+
+```{r message=FALSE, warning=FALSE,fig.width=12, fig.height=9}
+month.counts              <- table(unique(df$month.id)%%12)
+cur.names                 <- names(month.counts)
+cur.names[cur.names=="0"] <- "12"
+names(month.counts) <- cur.names
+month.counts              <- data.frame(month.counts) %>%
+  rename(month=Var1,month.count=Freq) %>% mutate(month=as.numeric(month))
+
+df %>% 
+  group_by(month,feature,status) %>%
+  summarise(counts=n())%>%
+  ungroup() %>%
+  inner_join(month.counts,by="month") %>%
+
+  mutate(counts=counts/month.count) %>%
+  ggplot(aes(y=counts,x=factor(month.abb[month],levels=month.abb[seq(12,1,-1)]))) +
+  geom_bar(aes(fill=status), stat="identity") +
+  facet_wrap(facets=~feature,ncol = 6) +
+  coord_flip() +
+  my_theme_dark + 
+  ylab("Count") +
+  xlab("") + 
+  ggtitle("Average Service \nChanges by Month") +
+  theme(axis.text    = element_text(size=10),
+        legend.text  = element_text(size=14),
+        legend.title = element_blank()      ,
+        strip.text   = element_text(face="bold")) +
+  scale_fill_manual(values=c("cyan","magenta"))
+```
+
+```{r message=FALSE, warning=FALSE,fig.width=12, fig.height=9}
+df %>%
+  filter(sexo!="UNKNOWN") %>%
+  ggplot(aes(x=sexo)) +
+  geom_bar(aes(fill=status)) +
+  facet_wrap(facets=~feature,ncol = 6) +
+  my_theme_dark + 
+  ylab("Count") +
+  xlab("") +
+  ggtitle("Service Changes by Gender") +
+  theme(axis.text    = element_text(size=10),
+        legend.text  = element_text(size=14),
+        legend.title = element_blank()      ,
+        strip.text   = element_text(face="bold")) +
+  scale_fill_manual(values=c("cyan","magenta"))
+```
+
+
+```{r message=FALSE, warning=FALSE,fig.width=8, fig.height=6}
+tot.H  <- sum(df$sexo=="H")
+tot.V  <- sum(df$sexo=="V")
+tmp.df <- df %>%
+  group_by(sexo,status) %>%
+  summarise(counts=n())
+tmp.df$counts[tmp.df$sexo=="H"] = tmp.df$counts[tmp.df$sexo=="H"] / tot.H
+tmp.df$counts[tmp.df$sexo=="V"] = tmp.df$counts[tmp.df$sexo=="V"] / tot.V
+tmp.df %>%
+  filter(sexo!="UNKNOWN") %>%
+  ggplot(aes(x=factor(feature),y=counts)) +
+  geom_bar(aes(fill=status,sexo),stat='identity') +
+  coord_flip() +
+  my_theme_dark + 
+  ylab("Ratio") +
+  xlab("") +
+  ggtitle("Normalized Service \n Changes by Gender") +
+  theme(axis.text    = element_text(size=20),
+        legend.text  = element_text(size=14),
+        legend.title = element_blank()      ,
+        strip.text   = element_text(face="bold")) +
+  scale_fill_manual(values=c("cyan","magenta"))
+rm(tmp.df)
+```
+
+
+```{r message=FALSE, warning=FALSE,fig.width=8, fig.height=9}
+tot.new     <- sum(df$ind_nuevo==1)
+tot.not.new <- sum(df$ind_nuevo!=1)
+tmp.df      <- df %>%
+  group_by(ind_nuevo,status) %>%
+  summarise(counts=n())
+tmp.df$counts[tmp.df$ind_nuevo==1] = tmp.df$counts[tmp.df$ind_nuevo==1] / tot.new
+tmp.df$counts[tmp.df$ind_nuevo!=1] = tmp.df$counts[tmp.df$ind_nuevo!=1] / tot.not.new
+tmp.df %>%
+  ggplot(aes(x=factor(feature),y=counts)) +
+  geom_bar(aes(fill=status,factor(ind_nuevo)),stat='identity') +
+  coord_flip() +
+  my_theme_dark + 
+  ylab("Count") +
+  xlab("") +
+  ggtitle("Normalized Service \n Changes by New Status") +
+  theme(axis.text    = element_text(size=10),
+        legend.text  = element_text(size=14),
+        legend.title = element_blank()      ,
+        strip.text   = element_text(face="bold")) +
+  scale_fill_manual(values=c("cyan","magenta"))
+rm(tmp.df)
+```
+
+```{r message=FALSE, warning=FALSE,fig.width=8, fig.height=6}
+df %>%
+  group_by(nomprov,status) %>%
+  summarise(y=mean(total.services)) %>%
+  ggplot(aes(x=factor(nomprov,levels=sort(unique(nomprov),decreasing=TRUE)),y=y)) +
+  geom_bar(stat="identity",aes(fill=status)) +
+  geom_text(aes(label=nomprov),
+            y=0.2,
+            hjust=0,
+            angle=0,
+            size=3,
+            color="#222222") +
+  coord_flip() +
+  my_theme_dark +
+  xlab("City") +
+  ylab("Total # Changes") + 
+  ggtitle("Service Changes\n by City") +
+  theme(axis.text    = element_blank(),
+        legend.text  = element_text(size=14),
+        legend.title = element_text(size=18)) +
+  scale_fill_manual(values=c("cyan","magenta"))
+```
+
+```{r message=FALSE, warning=FALSE,fig.width=8, fig.height=6}
+df %>%
+  group_by(antiguedad,status) %>%
+  summarise(counts=n()) %>%
+  ggplot(aes(x=factor(antiguedad),y=log(counts))) +
+  geom_point(alpha=0.6,aes(color=status)) +
+  my_theme_dark +
+  xlab("Seniority (Months)") +
+  ylab("Total # Changes") + 
+  ggtitle("Service Changes \n by Seniority") +
+  theme(axis.text    = element_blank(),
+        legend.text  = element_text(size=14),
+        legend.title = element_text(size=18)) +
+  scale_color_manual(values=c("cyan","magenta"))
+```
+
+```{r message=FALSE, warning=FALSE,fig.width=8, fig.height=6}
+df %>%
+  ggplot(aes(x=age,y=log(renta))) +
+  geom_point(alpha=0.5,aes(color=status)) +
+  my_theme_dark +
+  xlab("Age") +
+  ylab("Income (log scale)") + 
+  ggtitle("Income vs. Age") +
+  theme(
+        legend.text  = element_text(size=14),
+        legend.title = element_text(size=18)) +
+  scale_color_manual(values=c("cyan","magenta"))
+```
+
+
+```{r message=FALSE, warning=FALSE,fig.width=8, fig.height=6}
+df %>%
+  group_by(ncodpers) %>%
+  slice(c(1,n())) %>%
+  select(age,seniority=antiguedad,status) %>%
+  ggplot(aes(x=age,y=seniority)) +
+  geom_point(alpha=0.4,aes(color=status)) +
+  ggtitle("Seniority vs. Age") + 
+  my_theme_dark + 
+  scale_color_manual(values=c("cyan","magenta"))
+```
+
+
+```{r message=FALSE, warning=FALSE,fig.width=8, fig.height=6}
+df %>%
+  group_by(nomprov,status) %>%
+  summarise(y=mean(total.services)) %>%
+  ggplot(aes(x=factor(nomprov,levels=sort(unique(nomprov),decreasing=TRUE)),y=y)) +
+  geom_bar(stat="identity",aes(fill=status)) +
+  geom_text(aes(label=nomprov),
+            y=0.2,
+            hjust=0,
+            angle=0,
+            size=3,
+            color="#222222") +
+  coord_flip() +
+  my_theme_dark +
+  xlab("City") +
+  ylab("Total # Changes") + 
+  ggtitle("Service Changes\n by City") +
+  theme(axis.text    = element_blank(),
+        legend.text  = element_text(size=14),
+        legend.title = element_text(size=18)) +
+  scale_fill_manual(values=c("cyan","magenta"))
