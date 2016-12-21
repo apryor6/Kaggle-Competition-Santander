@@ -5,6 +5,7 @@ source('project/Santander/lib/get_recommendations.R')
 source('project/Santander/lib/MAP.R')
 
 val  <- fread("xgboost_preds_val_future.csv")
+val$products <- val$products.x
 purchased <- as.data.frame(fread("purchased-products.csv"))
 
 # val  <- fread("combined_preds_val.csv") # filename for ensemble version
