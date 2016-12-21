@@ -6,7 +6,7 @@ library(data.table)
 library(dplyr)
 library(lubridate)
 set.seed(round(second(Sys.time())*100))
-base <- ""
+base <- "/u/project/miao/apryor/ml/"
 
 filenames.val <- list(paste(base,"xgboost_preds_val_future_singleclass_best.csv",sep=""),
                       paste(base,"xgboost_preds_val_future_singleclass_1.csv",sep=""),
@@ -21,8 +21,7 @@ filenames.val <- list(paste(base,"xgboost_preds_val_future_singleclass_best.csv"
 
 weight.single.best  <- 1
 num.to.choose <- 10000
-models.to.use <- c(1,5,6)
-
+models.to.use <- c(1:10)
 weight.single.best.vector  <- rep(1,num.to.choose)
 weight.multi.best.vector   <- seq(0,1.5,0.05)
 weight.single.other.vector <- seq(0,1.5,0.05)
@@ -45,7 +44,7 @@ for (run.num in 1:num.to.choose){
   blend.weights <- c(weight.single.best,rep(weight.single.other,4),
                      weight.multi.best,rep(weight.multi.other,4))
   blend.weights <- rep(0,10)
-  blend.weights[models.to.use] <- runif(min=0,max=2,n=3)
+  blend.weights[models.to.use] <- c(1,runif(min=0,max=2,n=9))
   val.blended  <- as.data.frame(fread(filenames.val[[1]]))
   
   pred.names <-names(val.blended[grepl("pred",names(val.blended))])

@@ -13,7 +13,7 @@ source('project/Santander/lib/MAP.R')
 
 
 set.seed(1)
-use.resampling.weights <- FALSE
+use.resampling.weights <- TRUE
 use.many.seeds         <- TRUE
 if (use.many.seeds){
   rand.seeds <- 31:40
@@ -82,7 +82,7 @@ june.fractions  <- table(products.df$products[products.df$month.id==6])
 june.fractions  <- june.fractions / sum(june.fractions)
 total.fractions <- table(products.df$products)
 total.fractions <- total.fractions / sum(total.fractions)
-prod.weights.df     <- 1/(june.fractions / total.fractions)
+prod.weights.df     <- (june.fractions / total.fractions)
 
 
 
@@ -90,7 +90,7 @@ may.fractions   <- table(products.val$products[products.val$month.id==5])
 may.fractions   <- may.fractions / sum(may.fractions)
 total.fractions <- table(products.val$products)
 total.fractions <- total.fractions / sum(total.fractions)
-prod.weights.val     <- 1/(may.fractions / total.fractions)
+prod.weights.val     <- (may.fractions / total.fractions)
 
 
 if (use.resampling.weights){
