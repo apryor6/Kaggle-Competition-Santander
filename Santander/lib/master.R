@@ -11,6 +11,9 @@ source("project/Santander/munge/santander-cleaning[rmd2r].R")
 # Create file with products purchased each month
 source("project/Santander/munge/create-purchased-column.R")
 
+# Get purchase and transaction information
+source("project/Santander/lib/purchases-by-month.R")
+
 # Create purchase frequency feature
 source("project/Santander/munge/feature-purchase-frequency.R")
 
