@@ -1,0 +1,237 @@
+
+R version 3.2.3 (2015-12-10) -- "Wooden Christmas-Tree"
+Copyright (C) 2015 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # Master script for creating submission start to finish
+> setwd("/u/home/a/apryor/test/")
+> 
+> # Convert the .Rmd cleaning script to a regular R script
+> source('project/Santander/lib/rmd2rscript.R')
+> rmd2rscript("project/Santander/munge/santander-cleaning.Rmd")
+> 
+> # Clean the data
+> source("project/Santander/munge/santander-cleaning[rmd2r].R")
+------------------------------------------------------------------------------
+data.table + dplyr code now lives in dtplyr.
+Please library(dtplyr)!
+------------------------------------------------------------------------------
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:data.table’:
+
+    between, last
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+
+Attaching package: ‘lubridate’
+
+The following objects are masked from ‘package:data.table’:
+
+    hour, mday, month, quarter, wday, week, yday, year
+
+The following object is masked from ‘package:base’:
+
+    date
+
+Read 0.0% of 13647309 rowsRead 3.1% of 13647309 rowsRead 6.7% of 13647309 rowsRead 10.4% of 13647309 rowsRead 14.1% of 13647309 rowsRead 17.7% of 13647309 rowsRead 21.4% of 13647309 rowsRead 25.1% of 13647309 rowsRead 27.8% of 13647309 rowsRead 31.6% of 13647309 rowsRead 35.3% of 13647309 rowsRead 39.1% of 13647309 rowsRead 42.8% of 13647309 rowsRead 46.5% of 13647309 rowsRead 50.3% of 13647309 rowsRead 54.1% of 13647309 rowsRead 57.9% of 13647309 rowsRead 61.6% of 13647309 rowsRead 65.4% of 13647309 rowsRead 69.1% of 13647309 rowsRead 72.8% of 13647309 rowsRead 76.6% of 13647309 rowsRead 80.3% of 13647309 rowsRead 84.0% of 13647309 rowsRead 87.8% of 13647309 rowsRead 91.5% of 13647309 rowsRead 95.3% of 13647309 rowsRead 99.1% of 13647309 rowsRead 13647309 rows and 48 (of 48) columns from 2.135 GB file in 00:00:36
+'data.frame':	14576924 obs. of  50 variables:
+ $ ncodpers             : int  15889 15889 15889 15889 15889 15889 15889 15889 15889 15889 ...
+ $ fecha_dato           : POSIXct, format: "2015-01-27 16:00:00" "2015-02-27 16:00:00" ...
+ $ ind_empleado         : chr  "F" "F" "F" "F" ...
+ $ pais_residencia      : chr  "ES" "ES" "ES" "ES" ...
+ $ sexo                 : chr  "V" "V" "V" "V" ...
+ $ age                  : num  55 55 55 55 55 55 56 56 56 56 ...
+ $ fecha_alta           : POSIXct, format: "1995-01-15 16:00:00" "1995-01-15 16:00:00" ...
+ $ ind_nuevo            : num  0 0 0 0 0 0 0 0 0 0 ...
+ $ antiguedad           : num  240 241 242 243 244 245 246 247 248 249 ...
+ $ indrel               : num  1 1 1 1 1 1 1 1 1 1 ...
+ $ ult_fec_cli_1t       : chr  "" "" "" "" ...
+ $ indrel_1mes          : chr  "1" "1" "1" "1" ...
+ $ tiprel_1mes          : chr  "A" "A" "A" "A" ...
+ $ indresi              : chr  "S" "S" "S" "S" ...
+ $ indext               : chr  "N" "N" "N" "N" ...
+ $ conyuemp             : chr  "N" "N" "N" "N" ...
+ $ canal_entrada        : chr  "KAT" "KAT" "KAT" "KAT" ...
+ $ indfall              : chr  "N" "N" "N" "N" ...
+ $ nomprov              : chr  "MADRID" "MADRID" "MADRID" "MADRID" ...
+ $ ind_actividad_cliente: num  1 1 1 1 1 1 1 1 1 1 ...
+ $ renta                : num  326125 326125 326125 326125 326125 ...
+ $ segmento             : chr  "01 - TOP" "01 - TOP" "01 - TOP" "01 - TOP" ...
+ $ ind_ahor_fin_ult1    : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_aval_fin_ult1    : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_cco_fin_ult1     : int  1 1 1 1 1 1 1 1 1 1 ...
+ $ ind_cder_fin_ult1    : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_cno_fin_ult1     : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_ctju_fin_ult1    : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_ctma_fin_ult1    : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_ctop_fin_ult1    : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_ctpp_fin_ult1    : int  1 1 1 1 1 1 1 1 1 1 ...
+ $ ind_deco_fin_ult1    : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_deme_fin_ult1    : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_dela_fin_ult1    : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_ecue_fin_ult1    : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_fond_fin_ult1    : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_hip_fin_ult1     : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_plan_fin_ult1    : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_pres_fin_ult1    : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_reca_fin_ult1    : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_tjcr_fin_ult1    : int  1 0 0 0 1 1 1 0 0 0 ...
+ $ ind_valo_fin_ult1    : int  1 1 1 1 1 1 1 1 1 1 ...
+ $ ind_viv_fin_ult1     : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_nomina_ult1      : num  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_nom_pens_ult1    : num  0 0 0 0 0 0 0 0 0 0 ...
+ $ ind_recibo_ult1      : int  0 0 0 0 0 0 0 0 0 0 ...
+ $ month.id             : num  1 2 3 4 5 6 7 8 9 10 ...
+ $ month.previous.id    : num  0 1 2 3 4 5 6 7 8 9 ...
+ $ month                : num  1 2 3 4 5 6 7 8 9 10 ...
+ $ birthday.month       : num  7 7 7 7 7 7 7 7 7 7 ...
+[1] "Unique values for ind_empleado:"
+[1] "F" "A" "N" "B" ""  "S"
+[1] "Unique values for pais_residencia:"
+  [1] "ES" ""   "PT" "NL" "AD" "IN" "VE" "US" "FR" "GB" "IT" "DE" "MX" "CL" "CO"
+ [16] "CH" "CR" "PE" "JP" "AT" "AR" "AE" "BE" "MA" "CI" "QA" "SE" "BR" "FI" "RS"
+ [31] "KE" "JM" "RU" "AU" "CU" "EC" "KR" "DO" "LU" "GH" "CZ" "PA" "IE" "BO" "CM"
+ [46] "CA" "GR" "ZA" "RO" "KH" "IL" "NG" "CN" "DK" "NZ" "MM" "SG" "UY" "NI" "EG"
+ [61] "GI" "PH" "KW" "VN" "TH" "NO" "GQ" "BY" "AO" "UA" "TR" "PL" "OM" "GA" "GE"
+ [76] "BG" "HR" "PR" "HK" "HN" "BA" "MD" "HU" "SK" "TN" "TG" "SA" "MR" "DZ" "LB"
+ [91] "MT" "SV" "PK" "PY" "LY" "MK" "EE" "SN" "MZ" "GT" "GN" "TW" "IS" "LT" "CD"
+[106] "KZ" "BZ" "CF" "GM" "ET" "SL" "GW" "LV" "CG" "ML" "BM" "ZW" "AL" "DJ"
+[1] "Unique values for sexo:"
+[1] "V" "H" "" 
+[1] "Unique values for ult_fec_cli_1t:"
+  [1] ""           "2015-08-05" "2016-03-17" "2015-12-04" "2016-03-29"
+  [6] "2015-07-15" "2016-04-12" "2015-12-17" "2015-10-27" "2016-04-19"
+ [11] "2016-05-24" "2015-07-03" "2016-02-23" "2016-05-30" "2015-10-05"
+ [16] "2015-07-27" "2016-02-24" "2015-12-03" "2015-11-16" "2015-12-01"
+ [21] "2016-05-17" "2015-09-29" "2016-01-26" "2016-01-05" "2016-05-20"
+ [26] "2015-11-12" "2016-03-02" "2016-04-01" "2016-03-16" "2015-07-22"
+ [31] "2016-06-23" "2015-12-09" "2015-10-13" "2016-03-18" "2015-11-11"
+ [36] "2015-11-10" "2015-08-20" "2015-08-03" "2015-08-19" "2015-10-06"
+ [41] "2016-05-02" "2015-10-02" "2016-02-11" "2015-07-20" "2016-05-27"
+ [46] "2015-07-21" "2016-06-01" "2016-03-04" "2016-04-22" "2015-12-11"
+ [51] "2015-09-08" "2015-12-15" "2016-04-15" "2015-07-28" "2016-02-08"
+ [56] "2016-05-26" "2015-12-02" "2015-09-10" "2015-11-27" "2016-06-24"
+ [61] "2015-10-21" "2015-08-24" "2015-12-28" "2015-11-02" "2016-01-19"
+ [66] "2016-01-18" "2016-03-15" "2015-07-17" "2016-01-22" "2015-09-01"
+ [71] "2015-08-18" "2015-10-22" "2015-07-07" "2016-03-28" "2015-09-21"
+ [76] "2016-01-13" "2016-02-16" "2015-09-23" "2015-11-23" "2016-06-28"
+ [81] "2015-12-10" "2015-12-24" "2015-11-24" "2016-05-09" "2016-02-01"
+ [86] "2016-04-06" "2015-10-28" "2016-05-18" "2016-01-28" "2015-08-13"
+ [91] "2016-04-05" "2016-02-15" "2015-09-15" "2015-10-01" "2015-10-20"
+ [96] "2016-02-09" "2016-03-23" "2015-07-06" "2016-03-14" "2016-04-07"
+[101] "2016-01-11" "2016-06-03" "2016-02-12" "2015-07-14" "2015-09-11"
+[106] "2015-09-03" "2016-01-21" "2016-02-04" "2016-06-06" "2015-12-16"
+[111] "2015-11-19" "2015-08-06" "2015-12-21" "2015-08-27" "2015-11-18"
+[116] "2016-04-26" "2016-05-12" "2015-07-01" "2016-01-15" "2015-08-14"
+[121] "2016-02-25" "2015-09-14" "2016-03-07" "2016-01-12" "2016-04-08"
+[126] "2015-12-30" "2015-11-17" "2016-06-07" "2016-01-08" "2016-06-14"
+[131] "2015-08-25" "2015-09-28" "2015-09-24" "2016-06-22" "2016-01-07"
+[136] "2015-11-13" "2016-06-27" "2016-03-11" "2015-09-25" "2015-08-28"
+[141] "2015-11-25" "2016-01-25" "2016-05-06" "2015-08-04" "2015-08-10"
+[146] "2015-09-22" "2015-10-26" "2016-04-21" "2016-01-04" "2016-03-08"
+[151] "2015-12-14" "2015-09-18" "2016-05-25" "2016-03-10" "2016-03-01"
+[156] "2016-02-10" "2016-06-17" "2016-05-05" "2015-08-17" "2015-10-15"
+[161] "2016-06-10" "2015-11-04" "2015-10-07" "2016-06-21" "2015-09-02"
+[166] "2016-04-20" "2015-08-21" "2016-05-23" "2015-11-03" "2016-05-04"
+[171] "2015-07-30" "2015-07-09" "2015-10-19" "2016-05-10" "2015-07-29"
+[176] "2016-04-14" "2015-08-26" "2015-09-04" "2016-02-02" "2016-06-08"
+[181] "2015-12-22" "2016-02-26" "2015-10-09" "2015-09-17" "2016-01-27"
+[186] "2016-02-22" "2016-06-09" "2016-03-22" "2015-10-08" "2015-12-18"
+[191] "2016-02-03" "2016-03-30" "2016-04-28" "2016-04-13" "2016-06-15"
+[196] "2016-06-13" "2016-01-20" "2015-11-05" "2015-12-29" "2016-04-18"
+[201] "2016-06-16" "2015-07-02" "2015-11-20" "2016-04-27" "2015-12-07"
+[206] "2015-11-06" "2016-05-03" "2015-07-13" "2016-02-17" "2015-10-14"
+[211] "2015-08-11" "2015-10-29" "2016-06-20" "2016-04-04" "2016-02-18"
+[216] "2016-06-29" "2015-07-10" "2015-07-16" "2015-07-23" "2015-10-23"
+[221] "2016-05-19" "2016-05-11" "2015-12-23" "2015-11-26" "2015-11-09"
+[226] "2016-04-11" "2016-03-09" "2015-08-12" "2015-07-08" "2015-09-07"
+[231] "2016-03-21" "2015-09-09" "2016-01-14" "2015-09-16" "2016-03-24"
+[236] "2015-10-16" "2016-02-19" "2016-04-25" "2016-06-02" "2016-02-05"
+[241] "2016-05-16" "2016-03-03" "2016-05-13" "2015-08-07" "2015-07-24"
+[1] "Unique values for indrel_1mes:"
+ [1] "1"   "2"   "1.0" "2.0" "4.0" ""    "3.0" "3"   "P"   "4"   "0"  
+[1] "Unique values for tiprel_1mes:"
+[1] "A" "I" "P" ""  "R" "N"
+[1] "Unique values for indresi:"
+[1] "S" ""  "N"
+[1] "Unique values for indext:"
+[1] "N" "S" "" 
+[1] "Unique values for conyuemp:"
+[1] "N" "S" "" 
+[1] "Unique values for canal_entrada:"
+  [1] "KAT" "013" "KFA" ""    "KFC" "KAS" "007" "KHK" "KCH" "KHN" "KHC" "KFD"
+ [13] "RED" "KAW" "KHM" "KCC" "KAY" "KBW" "KAG" "KBZ" "KBO" "KEL" "KCI" "KCG"
+ [25] "KES" "KBL" "KBQ" "KFP" "KEW" "KAD" "KDP" "KAE" "KAF" "KAA" "KDO" "KEY"
+ [37] "KHL" "KEZ" "KAH" "KAR" "KHO" "KHE" "KBF" "KBH" "KAO" "KFV" "KDR" "KBS"
+ [49] "KCM" "KAC" "KCB" "KAL" "KGX" "KFT" "KAQ" "KFG" "KAB" "KAZ" "KGV" "KBJ"
+ [61] "KCD" "KDU" "KAJ" "KEJ" "KBG" "KAI" "KBM" "KDQ" "KAP" "KDT" "KBY" "KAM"
+ [73] "KFK" "KFN" "KEN" "KDZ" "KCA" "KHQ" "KFM" "004" "KFH" "KFJ" "KBR" "KFE"
+ [85] "KDX" "KDM" "KDS" "KBB" "KFU" "KAV" "KDF" "KCL" "KEG" "KDV" "KEQ" "KAN"
+ [97] "KFL" "KDY" "KEB" "KGY" "KBE" "KDC" "KBU" "KAK" "KBD" "KEK" "KCF" "KED"
+[109] "KAU" "KEF" "KFR" "KCU" "KCN" "KGW" "KBV" "KDD" "KCV" "KBP" "KCT" "KBN"
+[121] "KCX" "KDA" "KCO" "KCK" "KBX" "KDB" "KCP" "KDE" "KCE" "KEA" "KDG" "KDH"
+[133] "KEU" "KFF" "KEV" "KEC" "KCS" "KEH" "KEI" "KCR" "KDW" "KEO" "KHS" "KFS"
+[145] "025" "KFI" "KHD" "KCQ" "KDN" "KHR" "KEE" "KEM" "KFB" "KGU" "KCJ" "K00"
+[157] "KDL" "KDI" "KGC" "KHA" "KHF" "KGN" "KHP"
+[1] "Unique values for indfall:"
+[1] "N" "S" "" 
+[1] "Unique values for nomprov:"
+ [1] "MADRID"                 "BIZKAIA"                "PALMAS, LAS"           
+ [4] "BURGOS"                 "CADIZ"                  "ALICANTE"              
+ [7] "ZAMORA"                 "BARCELONA"              "GIPUZKOA"              
+[10] "GUADALAJARA"            "UNKNOWN"                "SEVILLA"               
+[13] "GRANADA"                "CORUÑA, A"              "VALENCIA"              
+[16] "BADAJOZ"                "CANTABRIA"              "MALAGA"                
+[19] "ALMERIA"                "PONTEVEDRA"             "ALAVA"                 
+[22] "GIRONA"                 "AVILA"                  "MURCIA"                
+[25] "SALAMANCA"              "SANTA CRUZ DE TENERIFE" "SEGOVIA"               
+[28] "JAEN"                   "TOLEDO"                 "CACERES"               
+[31] "NAVARRA"                "ASTURIAS"               "HUELVA"                
+[34] "LERIDA"                 "LUGO"                   "ZARAGOZA"              
+[37] "BALEARS, ILLES"         "PALENCIA"               "TARRAGONA"             
+[40] "VALLADOLID"             "CIUDAD REAL"            "CASTELLON"             
+[43] "OURENSE"                "RIOJA, LA"              "CORDOBA"               
+[46] "ALBACETE"               "CUENCA"                 "HUESCA"                
+[49] "LEON"                   "MELILLA"                "SORIA"                 
+[52] "TERUEL"                 "CEUTA"                 
+[1] "Unique values for segmento:"
+[1] "01 - TOP"           "02 - PARTICULARES"  ""                  
+[4] "03 - UNIVERSITARIO"
+Error in file(filename, "r", encoding = encoding) : 
+  cannot open the connection
+Calls: source -> withVisible -> eval -> eval -> source -> file
+In addition: Warning messages:
+1: In fread("train_ver2.csv") :
+  Bumped column 11 to type character on data row 510, field contains '2015-07-02'. Coercing previously read values in this column from logical, integer or numeric back to character which may not be lossless; e.g., if '00' and '000' occurred before they will now be just '0', and there may be inconsistencies with treatment of ',,' and ',NA,' too (if they occurred in this column before the bump). If this matters please rerun and set 'colClasses' to 'character' for this column. Please note that column type detection uses the first 5 rows, the middle 5 rows and the last 5 rows, so hopefully this message should be very rare. If reporting to datatable-help, please rerun and include the output from verbose=TRUE.
+2: In fread("train_ver2.csv") :
+  Bumped column 16 to type character on data row 416889, field contains 'N'. Coercing previously read values in this column from logical, integer or numeric back to character which may not be lossless; e.g., if '00' and '000' occurred before they will now be just '0', and there may be inconsistencies with treatment of ',,' and ',NA,' too (if they occurred in this column before the bump). If this matters please rerun and set 'colClasses' to 'character' for this column. Please note that column type detection uses the first 5 rows, the middle 5 rows and the last 5 rows, so hopefully this message should be very rare. If reporting to datatable-help, please rerun and include the output from verbose=TRUE.
+3: In fread("train_ver2.csv") :
+  Bumped column 12 to type character on data row 3793335, field contains 'P'. Coercing previously read values in this column from logical, integer or numeric back to character which may not be lossless; e.g., if '00' and '000' occurred before they will now be just '0', and there may be inconsistencies with treatment of ',,' and ',NA,' too (if they occurred in this column before the bump). If this matters please rerun and set 'colClasses' to 'character' for this column. Please note that column type detection uses the first 5 rows, the middle 5 rows and the last 5 rows, so hopefully this message should be very rare. If reporting to datatable-help, please rerun and include the output from verbose=TRUE.
+4: In fread("test_ver2.csv") :
+  Bumped column 11 to type character on data row 422, field contains '2016-06-03'. Coercing previously read values in this column from logical, integer or numeric back to character which may not be lossless; e.g., if '00' and '000' occurred before they will now be just '0', and there may be inconsistencies with treatment of ',,' and ',NA,' too (if they occurred in this column before the bump). If this matters please rerun and set 'colClasses' to 'character' for this column. Please note that column type detection uses the first 5 rows, the middle 5 rows and the last 5 rows, so hopefully this message should be very rare. If reporting to datatable-help, please rerun and include the output from verbose=TRUE.
+5: In file(filename, "r", encoding = encoding) :
+  cannot open file '/u/home/a/apryor/kaggle/competition-santander/project/Santander/lib/create-lag-feature.R': No such file or directory
+Execution halted

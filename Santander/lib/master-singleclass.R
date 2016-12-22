@@ -1,5 +1,5 @@
 # Master script for creating submission start to finish
-setwd("~/kaggle/competition-santander/")
+setwd("/u/home/a/apryor/test/")
 
 # Convert the .Rmd cleaning script to a regular R script
 source('project/Santander/lib/rmd2rscript.R')

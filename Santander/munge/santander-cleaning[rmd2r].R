@@ -37,7 +37,7 @@ my_theme_dark <- theme_dark() +
 #' ## First Glance	
 #' Limit the number of rows read in to avoid memory crashes with the kernel	
 #' 	
-setwd("~/kaggle/competition-santander/")	
+#setwd("~/kaggle/competition-santander/")	
 set.seed(1)	
 df   <- (fread("train_ver2.csv"))	
 test <- (fread("test_ver2.csv"))	
@@ -358,6 +358,14 @@ df$segmento[df$segmento==""]               <- "UNKNOWN"
 features <- grepl("ind_+.*ult.*",names(df))	
 df[,features] <- lapply(df[,features],function(x)as.integer(round(x)))	
 #' 	
+#' 	
+#' 	
+source('~/kaggle/competition-santander/project/Santander/lib/create-lag-feature.R')	
+df <- as.data.table(df)	
+df <- create.lag.feature(df,'ind_actividad_cliente',1:11,na.fill=0)	
+df[,last.age:=lag(age),by="ncodpers"]	
+df$turned.adult <- ifelse(df$age==20 & df$last.age==19,1,0)	
+df <- as.data.frame(df)	
 #' 	
 #' 	
 #' 	

@@ -1,0 +1,24 @@
+UGE job for master-singleclass built Thu Dec 22 05:20:28 PST 2016
+
+  master-singleclass directory:
+    /u/home/a/apryor/test/project/Santander/lib
+  Submitted to UGE:
+    Job 1377994, queue: miao_pod_gpu.q, sub: Thu Dec 22 05:20:56 2016
+  SCRATCH directory:
+    /work/1377994.1.miao_pod_gpu.q
+
+master-singleclass started on:   g402
+master-singleclass started at:   Thu Dec 22 05:21:38 PST 2016
+
+Currently Loaded Modulefiles:
+  1) gdal/1.9.2   2) proj/4.8.0   3) geos/3.4.2   4) R/3.2.3
+
+R CMD BATCH master-singleclass.R master-singleclass.out.1377994
+real 256.56
+user 224.63
+sys 31.30
+
+master-singleclass finished at:  Thu Dec 22 05:25:55 PST 2016
+
+Scratch files in /work/1377994.1.miao_pod_gpu.q deleted:
+total 0
