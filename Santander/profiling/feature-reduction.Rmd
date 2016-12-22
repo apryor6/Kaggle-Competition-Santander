@@ -13,7 +13,7 @@ library(ClustOfVar)
 ```
 
 ```{r}
-setwd("~/kaggle/competition-sandtander/")
+#setwd("~/kaggle/competition-sandtander/")
 df <- as.data.frame(fread("cleaned_train.csv"))
 limit.rows <- 1e4
 df <- df[sample(nrow(df),limit.rows),]
