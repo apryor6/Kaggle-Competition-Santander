@@ -2,7 +2,7 @@
 
 This is the source code for our solution to the [Santander Product Recommendation Competition](https://www.kaggle.com/c/santander-product-recommendation) on [Kaggle](www.kaggle.com)
 
-A full writeup of the solution is available [here](http://alanpryorjr.com/Kaggle-Competition-Santander-Solution/)
+A full writeup of the solution is available [here](http://alanpryorjr.com/2016-12-19-Kaggle-Competition-Santander-Solution/)
 
 ## Instructions to run and submit
 1. Get the data [here](https://www.kaggle.com/c/santander-product-recommendation/data)
